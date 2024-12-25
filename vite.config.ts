@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { fileURLToPath } from 'url'
+import path from 'path'
+import fs from 'fs-extra'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -27,7 +30,23 @@ export default defineConfig({
         },
         chunkFileNames: 'assets/js/[name].[hash].js',
         entryFileNames: 'assets/js/[name].[hash].js',
-      }
+      },
+      plugins: [
+        {
+          name: 'copy-res-folder',
+          closeBundle() {
+            const sourceDir = path.resolve(__dirname, 'res')
+            const destDir = path.resolve(__dirname, 'dist/res')
+            
+            try {
+              fs.copySync(sourceDir, destDir)
+              console.log('Copied res folder to dist/res')
+            } catch (err) {
+              console.error('Error copying res folder:', err)
+            }
+          }
+        }
+      ]
     }
   },
   server: {
