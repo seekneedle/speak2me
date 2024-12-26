@@ -594,14 +594,15 @@ const buttonText = computed(() => {
 
 const handleButtonClick = async () => {
   if (!userInput.value.trim()) return;
-  // Intercept 'No' responses to resume audio playback
-  if (userInput.value.trim().toLowerCase() === 'no') {    
-    //toggleAudioPlayback();
-    handlePostPlaybackResponse('no');
-    userInput.value = ''; // Clear input
-    return;
+  // Use await to check if the message should be sent
+  const shouldSendMessage = await handlePostPlaybackResponse(userInput.value.trim());
+  
+  if (shouldSendMessage) {
+    await sendMessage();
   }
-  await sendMessage();
+  
+  // Always clear the input
+  userInput.value = '';
 };
 
 const clearError = () => {

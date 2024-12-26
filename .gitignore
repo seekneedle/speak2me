@@ -1,6 +1,4 @@
 .DS_Store/
 .env
 .wrangler/
-/node_modules/
-node_modules
-dist.zip
+node_modules/

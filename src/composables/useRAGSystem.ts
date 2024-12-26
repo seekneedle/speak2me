@@ -4,6 +4,9 @@ import { generateSpeech } from './Text2Speech';
 import { AudioQueueManager } from './AudioQueueManager';
 import { extractJsonObjects } from '../utils/utils';
 import { config } from '../config/config';
+import { LangEn } from '@nlpjs/lang-en';
+import { containerBootstrap } from '@nlpjs/core';
+import { Nlp } from '@nlpjs/nlp';
 
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
@@ -368,6 +371,63 @@ async function makeStreamQueryRequest(question: string, onChunk: (chunk: string)
   }
 }
 
+interface NlpResult {
+  intent?: string;
+  score?: number;
+  utterance?: string;
+}
+
+// Global variable to store the trained NLP manager
+let nlp: Nlp | null = null;
+
+// Async function to initialize and train the NLP manager
+async function initializeNlp(): Promise<Nlp> {
+
+  const container = await containerBootstrap();
+  (container as any).use(Nlp);
+  (container as any).use(LangEn);
+  const nlp = container.get('nlp');
+
+  nlp.addLanguage('en');
+  // Train 'no' intents
+  const noUtterances = [
+    'no', 'nope', 'not really', 
+    'negative', 'don\'t want', 
+    'stop', 'cancel', 'forget it'
+  ];
+
+  noUtterances.forEach(utterance => {
+    nlp.addDocument('en', utterance, 'intent.no');
+  });
+
+  // Train some positive intents for contrast
+  const yesUtterances = [
+    'yes', 'sure', 'okay', 
+    'alright', 'continue'
+  ];
+
+  yesUtterances.forEach(utterance => {
+    nlp.addDocument('en', utterance, 'intent.yes');
+  });
+
+  // Train the model
+  try {
+    await nlp.train();
+  } catch (error) {
+    console.warn('NLP training encountered an issue:', error);
+    // Optionally, you can add more specific error handling here
+  }
+  return nlp;
+}
+
+// Async function to ensure NLP is initialized
+async function ensureNlpInitialized() {
+  if (!nlp) {
+    nlp = await initializeNlp();
+  }
+  return nlp;
+}
+
 export function useRAGSystem() {
   const shouldResumeAudio = ref(false);
   const isLoading = ref(false);
@@ -437,23 +497,41 @@ export function useRAGSystem() {
       isLoading.value = false;
     }
   }
+  
+  async function handlePostPlaybackResponse(response: string): Promise<boolean> {
+    try {
+      // Ensure NLP is initialized
+      const manager = await ensureNlpInitialized();
+  
+      // Perform intent classification
+      const result: NlpResult = await manager.process('en', response);
+  
+      // Check if the intent is classified as 'no'
+      if (result.intent !== undefined && 
+        result.intent === 'intent.no' && 
+        result.score !== undefined && 
+        result.score > 0.5) {
+        console.log('handlePostPlaybackResponse: intent detected', result);
+        const lastMessageIndex = messages.value.length - 1;
+        if (lastMessageIndex >= 0 && 
+            messages.value[lastMessageIndex].content === assistantMessage) {
+          console.log('handlePostPlaybackResponse: ' + assistantMessage);
+          // Resume audio playback
+          shouldResumeAudio.value = true;
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Intent classification error:', error);
+      return true;
+      
+    }
+  }
 
   function toggleStreamingMode() {
     isStreamingMode.value = !isStreamingMode.value;
-  }
-
-
-  function handlePostPlaybackResponse(response: string) {
-    if (response.toLowerCase() === 'no') {
-      console.log('handlePostPlaybackResponse: no');
-      const lastMessageIndex = messages.value.length - 1;
-      if (lastMessageIndex >= 0 && 
-          messages.value[lastMessageIndex].content === assistantMessage) {
-        console.log('handlePostPlaybackResponse: ' + assistantMessage);
-        // Resume audio playback
-        shouldResumeAudio.value = true;
-      }
-    }
   }
 
   return {

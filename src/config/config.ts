@@ -24,6 +24,6 @@ export const config = {
     },
     auth: {
         username: 'needle',
-        password: 'needle'
+        password: 'jQAjpkdalP^UKt21'
     }
 };
