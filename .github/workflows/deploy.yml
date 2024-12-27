@@ -20,6 +20,7 @@ jobs:
     
     - name: Install Dependencies
       run: |
+        npm cache clean --force
         echo "Current working directory:"
         pwd
         echo "Node.js version:"
@@ -29,8 +30,8 @@ jobs:
         echo "Listing package.json contents:"
         cat package.json
         echo "Running npm ci..."
-        npm ci
-        echo "npm ci completed successfully"
+        npm install --verbose
+        echo "npm install completed successfully"
     
     - name: Build Project
       run: npm run build
