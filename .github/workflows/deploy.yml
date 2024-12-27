@@ -66,40 +66,51 @@ jobs:
         script: |
           pwd
           whoami
-          ls -la
-          # Disable host key checking      
-          #mkdir -p ~/.ssh
-          #touch ~/.ssh/known_hosts
-          #ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          hostname
+          id
+          ls -la /var/www/speak2me
 
           # Remove existing deployment
-          #rm -rf /var/www/speak2me/*
+          rm -rf /var/www/speak2me/*
           
           # Create deployment directory if it doesn't exist
-          #mkdir -p /var/www/speak2me
-          
-          # Copy new build files
-          mkdir -p ~/deployment
-          cp -r ${{ github.workspace }}/dist/* ~/deployment/
-          ls -la ~/deployment
-          
-          # Prepare SSH key
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-            
-          # Create and secure the SSH key file
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          
-          
-          # Copy new build files
-          scp -i ~/.ssh/deploy_key -r ~/deployment ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }}:/var/www/speak2me/
-          
-          # Clean up key file
-          rm -f ~/.ssh/deploy_key  
+          mkdir -p /var/www/speak2me
 
           # Set correct permissions
           #sudo chown -R www-data:www-data /var/www/speak2me
+
+    - name: Transfer Build Files
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        source: "./dist/*"
+        target: "/var/www/speak2me/"
+
+          
+          
+          # # Copy new build files
+          # mkdir -p ~/deployment
+          # cp -r ${{ github.workspace }}/dist/ ~/deployment/
+          # ls -la ~/deployment
+          
+          # # Prepare SSH key
+          # mkdir -p ~/.ssh
+          # chmod 700 ~/.ssh
+            
+          # # Create and secure the SSH key file
+          # echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          # chmod 600 ~/.ssh/deploy_key
+          
+          
+          # # Copy new build files
+          # scp -i ~/.ssh/deploy_key -r ~/deployment ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }}:/var/www/speak2me/
+          
+          # # Clean up key file
+          # rm -f ~/.ssh/deploy_key  
+
+          
           
           # Restart nginx (if needed)
           #sudo systemctl restart nginx
