@@ -46,6 +46,12 @@ jobs:
           echo "Build output directory does not exist"
           exit 1
         fi    
+    
+    - name: Create Deployment Folder
+      run: |
+        mkdir -p ./deployment
+        cp -r ${{ github.workspace }}/dist/* ./deployment/
+        ls -la ./deployment
 
     - name: Deploy to Nginx Server
       uses: appleboy/ssh-action@master
@@ -75,7 +81,7 @@ jobs:
           
           
           # Copy new build files
-          scp -i ~/.ssh/deploy_key -r ${{ github.workspace }}/dist ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }}:/var/www/speak2me/
+          scp -i ~/.ssh/deploy_key -r ./deployment/* ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }}:/var/www/speak2me/
           
           # Clean up key file
           rm -f ~/.ssh/deploy_key  
