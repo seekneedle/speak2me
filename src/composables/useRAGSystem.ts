@@ -10,7 +10,8 @@ import { Nlp } from '@nlpjs/nlp';
 
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
-
+const SENTENCE_DELIMITERS = ['。', '！', '？', '.', '!', '?'] as const;
+type SentenceDelimiter = typeof SENTENCE_DELIMITERS[number];
 //let authToken = ref<string | null>(null);
 let seenBytes = 0;
 const shouldDisplayText = ref(true);
@@ -39,7 +40,8 @@ class AudioProcessingManager {
   private readonly MAX_CONCURRENT = 1; // Limit to 1 concurrent audio generations
   private readonly DELAY_BETWEEN_CALLS = 500; // 500ms delay between calls
   private accumulatedChunk = '';
-  private readonly SENTENCE_DELIMITER = '。';
+  
+  
   private sentenceSequence = 0;  // Add this line to track full sentence count
   // Create audio context and source for decoding
   private audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -163,17 +165,21 @@ class AudioProcessingManager {
     // Accumulate chunks until a complete sentence is formed
     this.accumulatedChunk += chunk;
 
+    // Find the first delimiter that exists in the accumulated chunk
+    const foundDelimiter = SENTENCE_DELIMITERS.find(delimiter => 
+      this.accumulatedChunk.includes(delimiter)
+    );
     // Check if the accumulated chunk contains a complete sentence
-    if (this.accumulatedChunk.includes(this.SENTENCE_DELIMITER)) {
+    if (foundDelimiter) {
       // Split sentences and filter out empty ones
-      const sentences = this.accumulatedChunk.split(this.SENTENCE_DELIMITER)
+      const sentences = this.accumulatedChunk.split(foundDelimiter)
         .filter(sentence => sentence.trim() !== '');
 
       // If we have at least one complete sentence
       if (sentences.length > 0) {
         // Take only the first sentence
         const sentence = sentences[0];
-        const fullSentence = sentence + this.SENTENCE_DELIMITER;
+        const fullSentence = sentence + foundDelimiter;
 
         //capture the current sentence sequence to be tied with audio
         let currentSentenceSequence = this.sentenceSequence;
@@ -402,9 +408,9 @@ async function initializeNlp(): Promise<Nlp> {
 
   // Train some positive intents for contrast
   const yesUtterances = [
-    '是', '当然', '好的', 
-    '没问题', '继续', '好', 
-    '是的', '可以', '肯定',
+    '是', '当然', '好的', '有的',
+    '没问题', '继续', '好', '是的',
+    '是的', '可以', '肯定', '有'
   ];
 
   yesUtterances.forEach(utterance => {
@@ -458,7 +464,7 @@ export function useRAGSystem() {
   async function getResponse(question: string) {
 
     error.value = null;
-    messages.value.push({ role: 'user', content: question });
+    //messages.value.push({ role: 'user', content: question });
 
     // Add user message
     //onst userMessageIndex = messages.value.push({ 
@@ -485,6 +491,7 @@ export function useRAGSystem() {
             role: 'assistant',
             content: assistantMessage
           });
+          audioProcessor.processAudioChunk(assistantMessage);
         }
       );
       //isLoading.value = false;
@@ -499,8 +506,15 @@ export function useRAGSystem() {
     }
   }
   
-  async function handlePostPlaybackResponse(response: string): Promise<boolean> {
+  async function IntentionHook(response: string): Promise<boolean> {
     try {
+      messages.value.push({ role: 'user', content: response });
+      // Find the latest assistant message
+      const latestAssistantMessage = messages.value
+      .slice()
+      .reverse()
+      .find(msg => msg.role === 'assistant');
+
       // Ensure NLP is initialized
       const manager = await ensureNlpInitialized();
   
@@ -512,11 +526,11 @@ export function useRAGSystem() {
         result.intent === 'intent.no' && 
         result.score !== undefined && 
         result.score > 0.5) {
-        console.log('handlePostPlaybackResponse: intent detected', result);
-        const lastMessageIndex = messages.value.length - 1;
-        if (lastMessageIndex >= 0 && 
-            messages.value[lastMessageIndex].content === assistantMessage) {
-          console.log('handlePostPlaybackResponse: ' + assistantMessage);
+        console.log('IntentionHook: intent detected', result);
+        console.log('IntentionHook: ' + latestAssistantMessage?.content);
+        if (latestAssistantMessage && 
+          latestAssistantMessage.content === assistantMessage) {
+          console.log('IntentionHook: ' + assistantMessage);
           // Resume audio playback
           shouldResumeAudio.value = true;
           return false;
@@ -543,7 +557,7 @@ export function useRAGSystem() {
     getResponse,
     toggleStreamingMode,
     stopStreaming,
-    handlePostPlaybackResponse,
+    IntentionHook,
     shouldResumeAudio
   };
 }

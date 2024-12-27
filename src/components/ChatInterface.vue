@@ -102,7 +102,7 @@ const {
   isLoading, 
   error, 
   getResponse,
-  handlePostPlaybackResponse,
+  IntentionHook,
   shouldResumeAudio
 } = useRAGSystem();
 
@@ -595,7 +595,7 @@ const buttonText = computed(() => {
 const handleButtonClick = async () => {
   if (!userInput.value.trim()) return;
   // Use await to check if the message should be sent
-  const shouldSendMessage = await handlePostPlaybackResponse(userInput.value.trim());
+  const shouldSendMessage = await IntentionHook(userInput.value.trim());
   
   if (shouldSendMessage) {
     await sendMessage();
