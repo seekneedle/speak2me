@@ -37,7 +37,14 @@ jobs:
         echo "npm install completed successfully"
     
     - name: Build Project
-      run: npm run build
+      run: |
+        npm run build
+        chmod -R 755 ${{ github.workspace }}/dist  
+
+        pwd
+        whoami
+        ls -la
+
     
     - name: Check Build Output
       run: |
@@ -46,7 +53,9 @@ jobs:
           echo "Build output directory does not exist"
           exit 1
         fi    
-        
+        pwd
+        whoami
+        ls -la
 
     - name: Deploy to Nginx Server
       uses: appleboy/ssh-action@master
@@ -55,6 +64,9 @@ jobs:
         username: ${{ secrets.SERVER_USERNAME }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          pwd
+          whoami
+          ls -la
           # Disable host key checking      
           #mkdir -p ~/.ssh
           #touch ~/.ssh/known_hosts
