@@ -58,7 +58,7 @@ jobs:
           #mkdir -p /var/www/speak2me
           
           # Copy new build files
-          scp -r ${{ github.workspace }}/dist/* ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }}:/var/www/speak2me/
+          scp -i ${{ secrets.SERVER_SSH_KEY }} -r ${{ github.workspace }}/dist/* ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }}:/var/www/speak2me/
           
           # Set correct permissions
           #sudo chown -R www-data:www-data /var/www/speak2me
