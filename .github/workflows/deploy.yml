@@ -46,12 +46,7 @@ jobs:
           echo "Build output directory does not exist"
           exit 1
         fi    
-    
-    - name: Create Deployment Folder
-      run: |
-        mkdir -p ~/deployment
-        cp -r ${{ github.workspace }}/dist/* ~/deployment/
-        ls -la ~/deployment
+        
 
     - name: Deploy to Nginx Server
       uses: appleboy/ssh-action@master
@@ -70,7 +65,12 @@ jobs:
           
           # Create deployment directory if it doesn't exist
           #mkdir -p /var/www/speak2me
-
+          
+          # Copy new build files
+          mkdir -p ~/deployment
+          cp -r ${{ github.workspace }}/dist/* ~/deployment/
+          ls -la ~/deployment
+          
           # Prepare SSH key
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
