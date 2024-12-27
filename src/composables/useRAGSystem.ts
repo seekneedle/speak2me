@@ -4,7 +4,7 @@ import { generateSpeech } from './Text2Speech';
 import { AudioQueueManager } from './AudioQueueManager';
 import { extractJsonObjects } from '../utils/utils';
 import { config } from '../config/config';
-import { LangEn } from '@nlpjs/lang-en';
+import { LangZh } from '@nlpjs/lang-zh';
 import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
 
@@ -385,29 +385,30 @@ async function initializeNlp(): Promise<Nlp> {
 
   const container = await containerBootstrap();
   (container as any).use(Nlp);
-  (container as any).use(LangEn);
+  (container as any).use(LangZh);
   const nlp = container.get('nlp');
 
-  nlp.addLanguage('en');
+  nlp.addLanguage('zh');
   // Train 'no' intents
   const noUtterances = [
-    'no', 'nope', 'not really', 
-    'negative', 'don\'t want', 
-    'stop', 'cancel', 'forget it'
+    '不', '不用', '不需要', 
+    '否', '不想', '没有了',
+    '停', '停止', '算了'
   ];
 
   noUtterances.forEach(utterance => {
-    nlp.addDocument('en', utterance, 'intent.no');
+    nlp.addDocument('zh', utterance, 'intent.no');
   });
 
   // Train some positive intents for contrast
   const yesUtterances = [
-    'yes', 'sure', 'okay', 
-    'alright', 'continue'
+    '是', '当然', '好的', 
+    '没问题', '继续', '好', 
+    '是的', '可以', '肯定',
   ];
 
   yesUtterances.forEach(utterance => {
-    nlp.addDocument('en', utterance, 'intent.yes');
+    nlp.addDocument('zh', utterance, 'intent.yes');
   });
 
   // Train the model
@@ -504,7 +505,7 @@ export function useRAGSystem() {
       const manager = await ensureNlpInitialized();
   
       // Perform intent classification
-      const result: NlpResult = await manager.process('en', response);
+      const result: NlpResult = await manager.process('zh', response);
   
       // Check if the intent is classified as 'no'
       if (result.intent !== undefined && 
