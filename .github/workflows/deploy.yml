@@ -47,21 +47,21 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
           # Disable host key checking      
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          #mkdir -p ~/.ssh
+          #touch ~/.ssh/known_hosts
+          #ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
           # Remove existing deployment
-          rm -rf /var/www/speak2me/*
+          #rm -rf /var/www/speak2me/*
           
           # Create deployment directory if it doesn't exist
-          mkdir -p /var/www/speak2me
+          #mkdir -p /var/www/speak2me
           
           # Copy new build files
           scp -r ${{ github.workspace }}/dist/* ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }}:/var/www/speak2me/
           
           # Set correct permissions
-          sudo chown -R www-data:www-data /var/www/speak2me
+          #sudo chown -R www-data:www-data /var/www/speak2me
           
           # Restart nginx (if needed)
-          sudo systemctl restart nginx
+          #sudo systemctl restart nginx
