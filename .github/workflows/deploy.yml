@@ -39,6 +39,14 @@ jobs:
     - name: Build Project
       run: npm run build
     
+    - name: Check Build Output
+      run: |
+        ls -la ${{ github.workspace }}/dist
+        if [ ! -d "${{ github.workspace }}/dist" ]; then
+          echo "Build output directory does not exist"
+          exit 1
+        fi    
+
     - name: Deploy to Nginx Server
       uses: appleboy/ssh-action@master
       with:
@@ -56,7 +64,7 @@ jobs:
           
           # Create deployment directory if it doesn't exist
           #mkdir -p /var/www/speak2me
-          
+
           # Prepare SSH key
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
