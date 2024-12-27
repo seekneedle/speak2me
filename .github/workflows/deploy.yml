@@ -20,6 +20,7 @@ jobs:
     
     - name: Install Dependencies
       run: |
+        npm config set registry https://registry.npmjs.org/
         npm cache clean --force
         echo "Current working directory:"
         pwd
@@ -29,8 +30,10 @@ jobs:
         npm --version
         echo "Listing package.json contents:"
         cat package.json
-        echo "Running npm ci..."
-        npm install --verbose
+        echo "Running npm install with exact versions..."
+        npm install --save-exact --verbose
+        echo "Verifying package-lock.json..."
+        npm ls
         echo "npm install completed successfully"
     
     - name: Build Project
