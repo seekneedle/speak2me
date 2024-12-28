@@ -545,6 +545,15 @@ export function useRAGSystem() {
     }
   }
 
+  async function initializeNlpManager() {
+    try {
+      await ensureNlpInitialized();
+      console.log('NLP Manager initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize NLP Manager:', error);
+    }
+  }
+
   function toggleStreamingMode() {
     isStreamingMode.value = !isStreamingMode.value;
   }
@@ -558,6 +567,7 @@ export function useRAGSystem() {
     toggleStreamingMode,
     stopStreaming,
     IntentionHook,
-    shouldResumeAudio
+    shouldResumeAudio,
+    initializeNlpManager
   };
 }

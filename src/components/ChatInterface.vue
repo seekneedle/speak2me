@@ -103,7 +103,8 @@ const {
   error, 
   getResponse,
   IntentionHook,
-  shouldResumeAudio
+  shouldResumeAudio,
+  initializeNlpManager
 } = useRAGSystem();
 
 const userInput = ref('');
@@ -623,6 +624,7 @@ const scrollToBottom = async () => {
 onMounted(() => {
   //setupAudioPlayback();
   init3DRotatingCircle();
+  initializeNlpManager();
 });
 
 onUnmounted(() => {
