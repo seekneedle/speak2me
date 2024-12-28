@@ -3,11 +3,11 @@ const isDev = import.meta.env.DEV;
 const API_CONFIG = {
     development: {
         baseUrl: '', // Empty for relative URLs that will be handled by Vite proxy
-        ttsBaseUrl: '',//'http://localhost:5100'
+        ttsBaseUrl: ''//'http://localhost:5100'
     },
     production: {
         baseUrl: 'https://kb.uuxlink.com', //'https://8.152.213.191:8471', // Direct backend URL in production
-        ttsBaseUrl: 'https://askrag-proxy.wulfgang.workers.dev'//'https://openspeech.bytedance.com'//
+        ttsBaseUrl: 'https://kb.uuxlink.com'//'https://askrag-proxy.wulfgang.workers.dev'//'https://openspeech.bytedance.com'//
     }
 };
 

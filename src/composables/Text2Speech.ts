@@ -64,7 +64,7 @@ export async function generateSpeech(text: string,
     const requestJson = {
         app: {
             appid: appid,
-            token: "access_token",
+            token: access_token,
             cluster: cluster
         },
         user: {
