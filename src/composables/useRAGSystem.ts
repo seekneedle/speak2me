@@ -549,7 +549,7 @@ export function useRAGSystem() {
 
   async function initializeNlpManager() {
     try {
-      await ensureNlpInitialized();
+      nlp = await ensureNlpInitialized();
       console.log('NLP Manager initialized successfully');
     } catch (error) {
       console.error('Failed to initialize NLP Manager:', error);
