@@ -6,6 +6,7 @@ import { extractJsonObjects } from '../utils/utils';
 import { config } from '../config/config';
 import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
+import { timeStamp } from 'console';
 
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
@@ -268,7 +269,10 @@ async function makeNormalQueryRequest(question: string): Promise<string> {
   }
 }
 
-async function makeStreamQueryRequest(question: string, onChunk: (chunk: string) => void, onComplete?: () => void): Promise<void> {
+async function makeStreamQueryRequest(question: string, 
+                                      onChunk: (chunk: string) => void, 
+                                      onStart?: () => void, 
+                                      onComplete?: () => void): Promise<void> {
   audioProcessor.reset();
   shouldDisplayText.value = true;
   const requestBody = {
@@ -303,14 +307,10 @@ async function makeStreamQueryRequest(question: string, onChunk: (chunk: string)
         
         if (progressEvent.event && progressEvent.event.target) {
           const target = progressEvent.event.target as XMLHttpRequest;
-          // Log additional XMLHttpRequest details
-          console.log('XMLHttpRequest readyState:', target.readyState);
-          console.log('XMLHttpRequest status:', target.status);
-          console.log('XMLHttpRequest statusText:', target.statusText);
 
           const responseText = target.responseText.slice(seenBytes || 0);
           seenBytes = target.responseText.length;
-          console.log('Response text:', responseText);
+
           if (responseText) {
             const jsonObjects = extractJsonObjects(responseText);
 
@@ -319,14 +319,15 @@ async function makeStreamQueryRequest(question: string, onChunk: (chunk: string)
               .filter((content: string) => content.trim() !== '');
 
             const chunksArray = chunks.flatMap((chunk) => chunk.split('\n').filter(Boolean));
-            
+            console.log('getting response at: ', new Date().toISOString());
+            onStart?.();
 
             for (const chunk of chunksArray) {
               try {
                 // Only display text if shouldDisplayText is true
                 if (shouldDisplayText.value) {
                   onChunk(chunk);
-                  console.log('Streaming chunk:', chunk);
+                  
                   // Process audio in background
                   await audioProcessor.processAudioChunk(chunk);
                 } else {
@@ -341,7 +342,7 @@ async function makeStreamQueryRequest(question: string, onChunk: (chunk: string)
             }
             // Check if all content has been retrieved
             if (target.readyState === 4 && target.status === 200) {
-              console.log('All content retrieved');
+              console.log('All content retrieved at:', new Date().toISOString());
               onComplete?.();
             }
           }
@@ -364,13 +365,13 @@ async function makeStreamQueryRequest(question: string, onChunk: (chunk: string)
   try {
     // Wait for full content retrieval
     await contentCompletionPromise;
-    console.log('contentCompletionPromise resolved');
+    console.log('contentCompletionPromise resolved at:', new Date().toISOString());
   } catch (error) {
     console.error('Stream query request error:', error);
     throw error;
   } finally {
     audioProcessor.stopAudioPlayback(); 
-    console.log('Stream query request completed.');
+    console.log('Stream query request completed at:', new Date().toISOString());
 
     return Promise.resolve();
   }
@@ -479,7 +480,7 @@ export function useRAGSystem() {
       role: 'assistant', 
       content: '' 
     }) - 1;
-
+    console.log('start makeStreamQueryRequest at:', new Date().toISOString());
     isLoading.value = true;
     try {
       await makeStreamQueryRequest(
@@ -488,11 +489,15 @@ export function useRAGSystem() {
           // Update the assistant's message content with streaming chunks
           messages.value[assistantMessageIndex].content += chunk;
         },
+        () => {          
+          isLoading.value = false;
+        },
         () => {
           messages.value.push({
             role: 'assistant',
             content: assistantMessage
           });
+          //isLoading.value = false;
           audioProcessor.processAudioChunk(assistantMessage);
         }
       );
@@ -503,8 +508,8 @@ export function useRAGSystem() {
       
       messages.value[assistantMessageIndex].content = `Error: ${errorMessage}`;
     } finally {
-      console.log('makeStreamQueryRequest completed.');
-      isLoading.value = false;
+      console.log('makeStreamQueryRequest completed at:', new Date().toISOString());
+      //isLoading.value = false;
     }
   }
   
