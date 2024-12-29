@@ -64,6 +64,34 @@
         <!-- Input Area -->
         <div class="border-t p-2 md:p-4 bg-gray-50">
           <div class="flex space-x-2 md:space-x-4 items-center">
+            <button 
+              @click="toggleSpeechRecognition" 
+              class="bg-blue-100 text-blue-600 p-2 rounded-full hover:bg-blue-200 transition-colors"
+              :class="{ 'bg-red-100 text-red-600': isListening }"
+            >
+              <svg 
+                v-if="!isListening" 
+                xmlns="http://www.w3.org/2000/svg" 
+                class="h-6 w-6" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <svg 
+                v-else 
+                xmlns="http://www.w3.org/2000/svg" 
+                class="h-6 w-6" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                <line x1="23" y1="1" x2="1" y2="23" stroke="currentColor" stroke-width="2" />
+              </svg>
+            </button>
+
             <input
               v-model="userInput"
               type="text"
@@ -80,6 +108,30 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Speech Recognition Modal -->
+    <div 
+      v-if="isListening" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg p-6 w-80 text-center relative">
+        <button 
+          @click="stopSpeechRecognition" 
+          class="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
+        <h3 class="text-xl font-semibold mb-4">Listening...</h3>
+        
+        <!-- Voice Wave Visualization -->
+        <canvas 
+          ref="voiceWaveCanvas" 
+          class="w-full h-32 mb-4"
+        ></canvas>
+        
+        <p class="text-gray-600 mb-4">{{ transcriptText }}</p>
       </div>
     </div>
   </div>
@@ -635,6 +687,189 @@ const scrollToBottom = async () => {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     console.log('Scrolled to bottom:', messagesContainer.value.scrollHeight);
   }
+};
+
+// Speech Recognition Setup
+const isListening = ref(false);
+const transcriptText = ref('');
+const voiceWaveCanvas = ref<HTMLCanvasElement | null>(null);
+let speechRecognition: SpeechRecognition | null = null;
+let audioContext: AudioContext | null = null;
+let speechRecognitionAnalyser: AnalyserNode | null = null;
+
+const initializeSpeechRecognition = () => {
+  // Check browser support
+  const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+  
+  if (!SpeechRecognition) {
+    alert('Speech recognition is not supported in this browser.');
+    return null;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.lang = 'zh-CN';
+
+  let speechTimeout: number | null = null;
+
+  recognition.onresult = (event: SpeechRecognitionEvent) => {
+    // Clear any existing timeout
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+    }
+
+    const transcript = Array.from(event.results)
+      .map(result => result[0])
+      .map(result => result.transcript)
+      .join('');
+    
+    transcriptText.value = transcript;
+    userInput.value = transcript;
+
+    // Set a new timeout to stop recognition if no speech is detected
+    speechTimeout = setTimeout(() => {
+      stopSpeechRecognition();
+    }, 2000) as unknown as number;
+  };
+
+  recognition.onend = () => {
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+    }
+    isListening.value = false;
+    stopVoiceVisualization();
+  };
+
+  return recognition;
+};
+
+const toggleSpeechRecognition = () => {
+  if (!speechRecognition) {
+    speechRecognition = initializeSpeechRecognition();
+  }
+
+  if (!isListening.value) {
+    startSpeechRecognition();
+  } else {
+    stopSpeechRecognition();
+  }
+};
+
+const startSpeechRecognition = () => {
+  if (speechRecognition) {
+    isListening.value = true;
+    transcriptText.value = '';
+    userInput.value = '';
+    speechRecognition.start();
+    startVoiceVisualization();
+  }
+};
+
+const stopSpeechRecognition = () => {
+  if (speechRecognition) {
+    speechRecognition.stop();
+    isListening.value = false;
+    stopVoiceVisualization();
+  }
+};
+
+const startVoiceVisualization = () => {
+  nextTick(() => {
+    // Wait for the canvas to be available
+    if (!voiceWaveCanvas.value) {
+      console.warn('Voice wave canvas not yet available');
+      return;
+    }
+
+    console.log('startVoiceVisualization');
+    
+    // Close any existing audio context to prevent multiple contexts
+    if (audioContext) {
+      audioContext.close();
+    }
+
+    // Initialize audio context and analyser
+    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Request microphone access
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        const source = audioContext!.createMediaStreamSource(stream);
+        speechRecognitionAnalyser = audioContext!.createAnalyser();
+        source.connect(speechRecognitionAnalyser);
+        
+        speechRecognitionAnalyser.fftSize = 256;
+        const bufferLength = speechRecognitionAnalyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const canvas = voiceWaveCanvas.value;
+        const canvasCtx = canvas && canvas.getContext('2d');
+
+        if (!canvasCtx) {
+          console.error('Could not get canvas context');
+          return;
+        }
+
+        // Ensure canvas is clear and sized correctly
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+
+        function draw() {
+          if (!isListening.value || !canvasCtx || !speechRecognitionAnalyser) {
+            if (!canvasCtx) {
+              return
+            }
+            // Clear the canvas when not listening
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            return;
+          }
+
+          requestAnimationFrame(draw);
+
+          speechRecognitionAnalyser.getByteFrequencyData(dataArray);
+
+          // Clear canvas
+          canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+          const barWidth = (canvas.width / dataArray.length) * 2.5;
+          let barHeight;
+          let x = 0;
+
+          // Draw colorful frequency bars
+          for (let i = 0; i < dataArray.length; i++) {
+            barHeight = dataArray[i] / 2;
+
+            // Create a gradient effect
+            const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
+            gradient.addColorStop(0, `rgba(50, 150, 255, 0.7)`);
+            gradient.addColorStop(1, `rgba(50, 50, 255, 0.3)`);
+
+            canvasCtx.fillStyle = gradient;
+            canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+            x += barWidth + 1;
+          }
+        }
+
+        console.log('Visualizing voice');
+        // Start drawing
+        draw();
+      })
+      .catch(err => {
+        console.error('Error accessing microphone', err);
+        alert('Could not access microphone. Please check permissions.');
+      });
+  });
+};
+
+const stopVoiceVisualization = () => {
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  speechRecognitionAnalyser = null;
 };
 
 // Lifecycle hooks
