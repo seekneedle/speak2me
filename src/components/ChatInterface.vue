@@ -89,7 +89,24 @@
 import { ref, onMounted, nextTick, computed, onUnmounted, watch } from 'vue';
 import ChatMessage from './ChatMessage.vue';
 import { useRAGSystem } from '../composables/useRAGSystem';
-import * as THREE from 'three';
+import { 
+  Scene, 
+  PerspectiveCamera, 
+  WebGLRenderer, 
+  Line,
+  CircleGeometry, 
+  MeshBasicMaterial, 
+  AdditiveBlending,
+  AmbientLight,
+  Object3D,
+  DirectionalLight,
+  BufferGeometry,
+  Float32BufferAttribute,
+  LineBasicMaterial,
+  ShaderMaterial,
+  Color,
+  Mesh 
+} from 'three';
 
 // Audio and visualization refs
 const waveformCanvas = ref<HTMLCanvasElement | null>(null);
@@ -110,11 +127,11 @@ const {
 const userInput = ref('');
 
 // Reactive references for Three.js objects
-let camera: THREE.PerspectiveCamera | null = null  //相机
-let scene: THREE.Scene | null = null  //场景
-let renderer: THREE.WebGLRenderer | null = null  //渲染器
-let waveformMesh: THREE.Line | null = null  //波形网格
-let rotatingCircleMesh: THREE.Mesh | null = null  // New mesh for rotating circle
+let camera: PerspectiveCamera | null = null  //相机
+let scene: Scene | null = null  //场景
+let renderer: WebGLRenderer | null = null  //渲染器
+let waveformMesh: Line | null = null  //波形网格
+let rotatingCircleMesh: Mesh | null = null  // New mesh for rotating circle
 const analyser = ref<AnalyserNode | null>(null);
 const animationFrameId = ref<number | null>(null);
 
@@ -276,10 +293,10 @@ const init3DWaveform = () => {
   if (!waveformCanvas.value || !audioElement.value) return;
 
   // Scene setup
-  scene = new THREE.Scene();
+  scene = new Scene();
   
   // Camera
-  camera = new THREE.PerspectiveCamera(
+  camera = new PerspectiveCamera(
     75, 
     waveformCanvas.value.clientWidth / waveformCanvas.value.clientHeight, 
     0.1, 
@@ -288,7 +305,7 @@ const init3DWaveform = () => {
   camera.position.z = 5;
 
   // Renderer
-  renderer = new THREE.WebGLRenderer({ 
+  renderer = new WebGLRenderer({ 
     canvas: waveformCanvas.value,
     alpha: true,
     antialias: true 
@@ -299,15 +316,15 @@ const init3DWaveform = () => {
   );
 
   // Lighting
-  const ambientLight = new THREE.AmbientLight(0x404040);
+  const ambientLight = new AmbientLight(0x404040);
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  const directionalLight = new DirectionalLight(0xffffff, 0.5);
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
 
   // Create dynamic waveform geometry
-  const geometry = new THREE.BufferGeometry();
+  const geometry = new BufferGeometry();
   const vertices: number[] = [];
   const numPoints = 128; // Match analyser frequency bin count
 
@@ -321,19 +338,19 @@ const init3DWaveform = () => {
 
   geometry.setAttribute(
     'position', 
-    new THREE.Float32BufferAttribute(vertices, 3)
+    new Float32BufferAttribute(vertices, 3)
   );
 
   // Material with gradient and glow
-  const material = new THREE.LineBasicMaterial({
+  const material = new LineBasicMaterial({
     color: 0x3498db,
     transparent: true,
     opacity: 0.7,
-    blending: THREE.AdditiveBlending
+    blending: AdditiveBlending
   });
 
   // Create the waveform line
-  waveformMesh = new THREE.Line(geometry, material);
+  waveformMesh = new Line(geometry, material);
   scene.add(waveformMesh);
 
   // Animate
@@ -401,9 +418,9 @@ const init3DRotatingCircle = () => {
   }
 
   // Create scene, camera, and renderer
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(75, waveformCanvas.value.clientWidth / waveformCanvas.value.clientHeight, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer({ 
+  scene = new Scene();
+  camera = new PerspectiveCamera(75, waveformCanvas.value.clientWidth / waveformCanvas.value.clientHeight, 0.1, 1000);
+  renderer = new WebGLRenderer({ 
     canvas: waveformCanvas.value,
     antialias: true,
     alpha: true 
@@ -412,12 +429,12 @@ const init3DRotatingCircle = () => {
   renderer.setClearColor(0x000000, 0); // Transparent background
 
   // Create a pulsating circle geometry
-  const circleGeometry = new THREE.CircleGeometry(5, 64);
-  const circleMaterial = new THREE.ShaderMaterial({
+  const circleGeometry = new CircleGeometry(5, 64);
+  const circleMaterial = new ShaderMaterial({
     uniforms: {
       time: { value: 0 },
       amplitude: { value: 0 },
-      color: { value: new THREE.Color(0x1E90FF) } // Tailwind blue-500
+      color: { value: new Color(0x1E90FF) } // Tailwind blue-500
     },
     vertexShader: `
       uniform float time;
@@ -464,7 +481,7 @@ const init3DRotatingCircle = () => {
     transparent: true
   });
 
-  rotatingCircleMesh = new THREE.Mesh(circleGeometry, circleMaterial);
+  rotatingCircleMesh = new Mesh(circleGeometry, circleMaterial);
   scene.add(rotatingCircleMesh);
 
   // Position camera
@@ -487,7 +504,7 @@ const init3DRotatingCircle = () => {
     }
 
     // Update shader uniforms
-    if (rotatingCircleMesh.material instanceof THREE.ShaderMaterial) {
+    if (rotatingCircleMesh.material instanceof ShaderMaterial) {
       const shaderMaterial = rotatingCircleMesh.material;
       
       // Update time uniform for animation
@@ -553,7 +570,7 @@ const init3DRotatingCircle = () => {
     // Dispose of Three.js resources
     if (scene) {
       scene.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
+        if (object instanceof Mesh) {
           object.geometry.dispose();
           if (Array.isArray(object.material)) {
             object.material.forEach(material => material.dispose());
@@ -634,8 +651,8 @@ onUnmounted(() => {
   }
 
   if (scene) {
-    scene.traverse((object: THREE.Object3D) => {
-      if (object instanceof THREE.Mesh) {
+    scene.traverse((object: Object3D) => {
+      if (object instanceof Mesh) {
         object.geometry.dispose();
         
         // Check if material is an array or a single material

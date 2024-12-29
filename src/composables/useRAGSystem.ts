@@ -4,13 +4,12 @@ import { generateSpeech } from './Text2Speech';
 import { AudioQueueManager } from './AudioQueueManager';
 import { extractJsonObjects } from '../utils/utils';
 import { config } from '../config/config';
-import { LangZh } from '@nlpjs/lang-zh';
 import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
 
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
-const SENTENCE_DELIMITERS = ['。', '！', '？', '.', '!', '?'] as const;
+const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
 type SentenceDelimiter = typeof SENTENCE_DELIMITERS[number];
 //let authToken = ref<string | null>(null);
 let seenBytes = 0;
@@ -388,10 +387,13 @@ let nlp: Nlp | null = null;
 
 // Async function to initialize and train the NLP manager
 async function initializeNlp(): Promise<Nlp> {
-
   const container = await containerBootstrap();
   (container as any).use(Nlp);
+  
+  // Lazy load the LangZh package
+  const { LangZh } = await import('@nlpjs/lang-zh');
   (container as any).use(LangZh);
+  
   const nlp = container.get('nlp');
 
   nlp.addLanguage('zh');
