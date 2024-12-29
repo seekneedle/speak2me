@@ -1,16 +1,15 @@
 <template>
-  <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-    <div class="h-[600px] flex">
+  <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden responsive-container">
+    <div class="flex flex-col md:flex-row h-auto md:h-[600px]">
       <!-- Waveform Display -->
-      <div class="w-1/2 bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
+      <div class="w-full md:w-1/2 bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center responsive-waveform">
         <div 
-          class="w-full h-full flex items-center justify-center cursor-pointer relative overflow-hidden"
+          class="w-full h-[300px] md:h-full flex items-center justify-center cursor-pointer relative overflow-hidden"
           @click="toggleAudioPlayback"
         >
           <canvas 
             ref="waveformCanvas" 
             class="absolute inset-0 w-full h-full"
-            
           ></canvas>
           
           <!-- Playback indicator -->
@@ -20,7 +19,7 @@
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
-              class="h-24 w-24 text-white opacity-70 drop-shadow-lg" 
+              class="h-16 md:h-24 w-16 md:w-24 text-white opacity-70 drop-shadow-lg" 
               viewBox="0 0 24 24" 
               fill="currentColor"
             >
@@ -31,49 +30,50 @@
       </div>
 
       <!-- Chat Interface -->
-      <div class="w-1/2 flex flex-col">
+      <div class="w-full md:w-1/2 flex flex-col responsive-chat">
         <!-- Chat Messages -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-4" ref="messagesContainer">
+        <div class="flex-1 overflow-y-auto p-2 md:p-4 space-y-2 md:space-y-4" ref="messagesContainer">
           <ChatMessage
             v-for="(message, index) in messages"
             :key="index"
             :message="message"
+            class="text-sm md:text-base"
           />
           
           <!-- Loading Spinner -->
-          <div v-if="isLoading" class="flex justify-center items-center py-4">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"></div>
+          <div v-if="isLoading" class="flex justify-center items-center py-2 md:py-4">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 md:h-12 md:w-12"></div>
           </div>
         </div>
 
         <!-- Error Message Banner -->
         <div 
           v-if="error" 
-          class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" 
+          class="bg-red-100 border border-red-400 text-red-700 px-2 py-2 md:px-4 md:py-3 rounded relative text-xs md:text-base" 
           role="alert"
         >
           <span class="block sm:inline">{{ error }}</span>
           <span 
             @click="clearError" 
-            class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
+            class="absolute top-0 bottom-0 right-0 px-2 py-2 md:px-4 md:py-3 cursor-pointer text-sm md:text-base"
           >
             ×
           </span>
         </div>
 
         <!-- Input Area -->
-        <div class="border-t p-4 bg-gray-50">
-          <div class="flex space-x-4 items-center">
+        <div class="border-t p-2 md:p-4 bg-gray-50">
+          <div class="flex space-x-2 md:space-x-4 items-center">
             <input
               v-model="userInput"
               type="text"
               placeholder="Ask a question..."
-              class="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="flex-1 rounded-lg border border-gray-300 px-2 py-1 md:px-4 md:py-2 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               @keyup.enter="handleButtonClick"
             />
             <button
               @click="handleButtonClick"
-              class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="bg-blue-500 text-white px-3 py-1 md:px-6 md:py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
               :disabled="isLoading || !userInput.trim()"
             >
               {{ buttonText }}
@@ -702,6 +702,38 @@ watch(shouldResumeAudio, (newValue) => {
 </script>
 
 <style scoped>
+/* Mobile-first responsive adjustments */
+@media (max-width: 768px) {
+  .responsive-container {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .responsive-waveform {
+    height: 300px;
+  }
+
+  .responsive-chat {
+    height: auto;
+  }
+}
+
+/* Ensure canvas and other elements are responsive */
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Adjust text sizes for better mobile readability */
+.text-sm {
+  font-size: 0.75rem;
+}
+
+.text-base {
+  font-size: 1rem;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }
