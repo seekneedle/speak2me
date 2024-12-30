@@ -14,6 +14,7 @@ const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 //let authToken = ref<string | null>(null);
 let seenBytes = 0;
 const shouldDisplayText = ref(true);
+const isAssistantSpeaking = ref(false);
 
 interface Message {
   role: 'user' | 'assistant';
@@ -272,8 +273,9 @@ async function makeStreamQueryRequest(question: string,
                                       onChunk: (chunk: string) => void, 
                                       onStart?: () => void, 
                                       onComplete?: () => void): Promise<void> {
+  let isInterrupted: boolean = false;                                    
   audioProcessor.reset();
-  shouldDisplayText.value = true;
+  //shouldDisplayText.value = true;
   const requestBody = {
     id: config.bailian.indexId, // knowledge base id
     messages: [
@@ -331,6 +333,10 @@ async function makeStreamQueryRequest(question: string,
                   await audioProcessor.processAudioChunk(chunk);
                 } else {
                   audioProcessor.stopAudioPlayback(); 
+                  isInterrupted = true;
+                  console.log('Audio playback stopped at:', new Date().toISOString());
+                  // leave the unattended content 
+                  break;
                 }
               } catch (chunkError) {
                 console.error('Error processing stream chunk:', {
@@ -339,8 +345,9 @@ async function makeStreamQueryRequest(question: string,
                 });
               }
             }
+            shouldDisplayText.value = true;
             // Check if all content has been retrieved
-            if (target.readyState === 4 && target.status === 200) {
+            if (target.readyState === 4 && target.status === 200 && !isInterrupted) {
               console.log('All content retrieved at:', new Date().toISOString());
               onComplete?.();
             }
@@ -371,7 +378,7 @@ async function makeStreamQueryRequest(question: string,
   } finally {
     audioProcessor.stopAudioPlayback(); 
     console.log('Stream query request completed at:', new Date().toISOString());
-
+    
     return Promise.resolve();
   }
 }
@@ -477,7 +484,7 @@ export function useRAGSystem() {
     // Add placeholder for assistant message
     const assistantMessageIndex = messages.value.push({ 
       role: 'assistant', 
-      content: '' 
+      content: '思考中...' 
     }) - 1;
     console.log('start makeStreamQueryRequest at:', new Date().toISOString());
     isLoading.value = true;
@@ -488,7 +495,9 @@ export function useRAGSystem() {
           // Update the assistant's message content with streaming chunks
           messages.value[assistantMessageIndex].content += chunk;
         },
-        () => {          
+        () => {
+          isAssistantSpeaking.value = true;
+          messages.value[assistantMessageIndex].content = '';          
           isLoading.value = false;
         },
         () => {
@@ -496,6 +505,7 @@ export function useRAGSystem() {
             role: 'assistant',
             content: assistantMessage
           });
+          isAssistantSpeaking.value = false;
           //isLoading.value = false;
           audioProcessor.processAudioChunk(assistantMessage);
         }
@@ -573,6 +583,8 @@ export function useRAGSystem() {
     getResponse,
     toggleStreamingMode,
     stopStreaming,
+    shouldDisplayText,
+    isAssistantSpeaking,
     IntentionHook,
     shouldResumeAudio,
     initializeNlpManager

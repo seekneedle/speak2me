@@ -171,6 +171,9 @@ const {
   isLoading, 
   error, 
   getResponse,
+  stopStreaming,
+  shouldDisplayText,
+  isAssistantSpeaking,
   IntentionHook,
   shouldResumeAudio,
   initializeNlpManager
@@ -664,6 +667,12 @@ const buttonText = computed(() => {
 
 const handleButtonClick = async () => {
   if (!userInput.value.trim()) return;
+  //stop the current streaming of answser text,
+  //and get ready for taking care of the new input
+  if (isAssistantSpeaking.value) {
+    stopStreaming();
+  }
+  
   // Use await to check if the message should be sent
   const shouldSendMessage = await IntentionHook(userInput.value.trim());
   
@@ -698,51 +707,107 @@ let audioContext: AudioContext | null = null;
 let speechRecognitionAnalyser: AnalyserNode | null = null;
 
 const initializeSpeechRecognition = () => {
-  // Check browser support
-  const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+  // Check browser support with multiple prefixes
+  const SpeechRecognition = 
+    window.SpeechRecognition || 
+    (window as any).webkitSpeechRecognition || 
+    (window as any).mozSpeechRecognition || 
+    (window as any).msSpeechRecognition;
   
   if (!SpeechRecognition) {
-    alert('Speech recognition is not supported in this browser.');
+    console.error('Speech recognition is not supported in this browser.');
+    alert('Your browser does not support speech recognition. Please try Chrome or Edge.');
     return null;
   }
 
-  const recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-  recognition.lang = 'zh-CN';
-
-  let speechTimeout: number | null = null;
-
-  recognition.onresult = (event: SpeechRecognitionEvent) => {
-    // Clear any existing timeout
-    if (speechTimeout) {
-      clearTimeout(speechTimeout);
-    }
-
-    const transcript = Array.from(event.results)
-      .map(result => result[0])
-      .map(result => result.transcript)
-      .join('');
+  try {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
     
-    transcriptText.value = transcript;
-    userInput.value = transcript;
+    // Detect browser language or fallback to a default
+    recognition.lang = navigator.language || 'zh-CN';
+    
+    console.log('Speech Recognition Language:', recognition.lang);
 
-    // Set a new timeout to stop recognition if no speech is detected
-    speechTimeout = setTimeout(() => {
-      stopSpeechRecognition();
-    }, 1000) as unknown as number;
-  };
+    let speechTimeout: number | null = null;
 
-  recognition.onend = () => {
-    if (speechTimeout) {
-      clearTimeout(speechTimeout);
-    }
-    isListening.value = false;
-    stopVoiceVisualization();
-  };
+    recognition.onstart = () => {
+      console.log('Speech recognition started');
+      isListening.value = true;
+    };
 
-  return recognition;
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      console.log('Speech Recognition Full Event:', event);
+      
+      // Clear any existing timeout
+      if (speechTimeout) {
+        clearTimeout(speechTimeout);
+      }
+
+      // More robust transcript extraction
+      const results = event.results;
+      const transcript = Array.from(results)
+        .map(result => result[0]?.transcript || '')
+        .filter(Boolean)
+        .join(' ');
+      
+      console.log('Extracted Transcript:', transcript);
+      
+      if (transcript) {
+        transcriptText.value = transcript;
+        userInput.value = transcript;
+      }
+
+      // Set a new timeout to stop recognition if no speech is detected
+      speechTimeout = setTimeout(() => {
+        console.log('Speech timeout triggered');
+        stopSpeechRecognition();
+      }, 2000) as unknown as number;
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      
+      // More detailed error handling
+      switch(event.error) {
+        case 'no-speech':
+          alert('No speech was detected. Please try again.');
+          break;
+        case 'audio-capture':
+          alert('No microphone was found. Ensure your microphone is connected.');
+          break;
+        case 'not-allowed':
+          alert('Permission to use microphone was denied. Please check your browser settings.');
+          break;
+        case 'network':
+          alert('Network error occurred. Check your internet connection.');
+          break;
+        default:
+          alert(`Speech recognition error: ${event.error}`);
+      }
+      
+      isListening.value = false;
+    };
+
+    recognition.onend = () => {
+      console.log('Speech recognition ended');
+      
+      if (speechTimeout) {
+        clearTimeout(speechTimeout);
+      }
+      
+      isListening.value = false;
+      stopVoiceVisualization();
+    };
+
+    return recognition;
+  } catch (error) {
+    console.error('Failed to initialize speech recognition:', error);
+    alert('Failed to initialize speech recognition. Please try a different browser.');
+    return null;
+  }
 };
 
 const toggleSpeechRecognition = () => {
@@ -759,6 +824,7 @@ const toggleSpeechRecognition = () => {
 
 const startSpeechRecognition = () => {
   if (speechRecognition) {
+    console.log('startSpeechRecognition');
     isListening.value = true;
     transcriptText.value = '';
     userInput.value = '';
@@ -769,6 +835,7 @@ const startSpeechRecognition = () => {
 
 const stopSpeechRecognition = () => {
   if (speechRecognition) {
+    console.log('stopSpeechRecognition');
     speechRecognition.stop();
     isListening.value = false;
     stopVoiceVisualization();
@@ -816,7 +883,7 @@ const startVoiceVisualization = () => {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
 
-        /* function draw() {
+        function draw() {
           if (!isListening.value || !canvasCtx || !speechRecognitionAnalyser) {
             if (!canvasCtx) {
               return
@@ -851,7 +918,7 @@ const startVoiceVisualization = () => {
 
             x += barWidth + 1;
           }
-        } */
+        } 
         /* function draw() {
           if (!isListening.value || !canvasCtx || !speechRecognitionAnalyser) {
             if (!canvasCtx) return;
@@ -960,7 +1027,7 @@ const startVoiceVisualization = () => {
             );
           }
         } */
-        function draw() {
+        /* function draw() {
           if (!isListening.value || !canvasCtx || !speechRecognitionAnalyser) {
             if (!canvasCtx) return;
             // Clear the canvas when not listening
@@ -1029,7 +1096,7 @@ const startVoiceVisualization = () => {
               barHeight  // Positive to draw downwards from center
             );
           }
-        }
+        } */
         console.log('Visualizing voice');
         // Start drawing
         draw();
@@ -1089,6 +1156,11 @@ onUnmounted(() => {
   waveformMesh = null;
   analyser.value = null;
   rotatingCircleMesh = null;
+});
+
+// Add this near your other watch functions
+watch(shouldDisplayText, (newValue) => {
+  console.log(`shouldDisplayText changed at ${new Date().toISOString()}: ${newValue}`);
 });
 
 // Watch shouldResumeAudio and resume audio when it becomes true
