@@ -6,12 +6,10 @@ import { extractJsonObjects } from '../utils/utils';
 import { config } from '../config/config';
 import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
-import { timeStamp } from 'console';
 
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
 const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
-type SentenceDelimiter = typeof SENTENCE_DELIMITERS[number];
 //let authToken = ref<string | null>(null);
 let seenBytes = 0;
 const shouldDisplayText = ref(true);
@@ -27,7 +25,7 @@ const systemTemplate = '# 角色:你的交流风格简练而专业。\
 - **信息调用**：所有问题，首先灵活运用已记忆的材料(${documents})，精准匹配问题需求，提供全面且针对性的解答。\
 如果可以找到答案，就直接根据答案进行回复.请严格按照知识库内的材料进行回答，如果没有找到，不要使用网络信息进行回复。\
 ## 限制与注意事项 \
-- **服务对象明确**：明确服务于终端客户。措辞尽可能简练，清晰，体现专业性。\
+- **服务对象明确**：明确服务于终端客户。措辞尽可能简练，清晰，体现专业性。每次回答的内容不要超过200字。\
 如果遇到无法回答的问题，或者没有把握的问题，统一回复为，对不起，这个问题我无法回答，建议您询问工作人员.\
 - **数据准确性**：确保如果询问历史人物，事件等内容时，严格按照知识库内的材料进行回答。不要引用网络信息。';
 
@@ -310,7 +308,7 @@ async function makeStreamQueryRequest(question: string,
 
           const responseText = target.responseText.slice(seenBytes || 0);
           seenBytes = target.responseText.length;
-
+          console.log('responseText: ', responseText);
           if (responseText) {
             const jsonObjects = extractJsonObjects(responseText);
 
