@@ -1,15 +1,16 @@
 import { ref } from 'vue';
 import axios, { AxiosProgressEvent } from 'axios';
-import { generateSpeech } from './Text2Speech';
-import { AudioQueueManager } from './AudioQueueManager';
+//import { generateSpeech } from './Text2Speech';
+//import { AudioQueueManager } from './AudioQueueManager';
+import { AudioProcessingManager } from './AudioProcessingManager';
 import { extractJsonObjects } from '../utils/utils';
 import { config } from '../config/config';
 import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
 
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
-const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
-const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
+//const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
+//const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
 //let authToken = ref<string | null>(null);
 let seenBytes = 0;
 const shouldDisplayText = ref(true);
@@ -29,7 +30,7 @@ const systemTemplate = '# 角色:你的交流风格简练而专业。\
 如果遇到无法回答的问题，或者没有把握的问题，统一回复为，对不起，这个问题我无法回答，建议您询问工作人员.\
 - **数据准确性**：确保如果询问历史人物，事件等内容时，严格按照知识库内的材料进行回答。不要引用网络信息。';
 
-class AudioProcessingManager {
+/* class AudioProcessingManager {
   // Static instance variable
   private static instance: AudioProcessingManager;
 
@@ -228,11 +229,11 @@ class AudioProcessingManager {
     this.audioQueueManager.stopAudioPlayback();
     this.audioQueueManager.clear();
   }
-}
+} */
 
 const audioProcessor = AudioProcessingManager.getInstance();
 
-async function makeNormalQueryRequest(question: string): Promise<string> {
+/* async function makeNormalQueryRequest(question: string): Promise<string> {
   const requestBody = {
     id: "wtu9xf10cd", // knowledge base id
     messages: [
@@ -265,7 +266,7 @@ async function makeNormalQueryRequest(question: string): Promise<string> {
     console.error('Normal query request error:', error);
     throw error;
   }
-}
+} */
 
 async function makeStreamQueryRequest(question: string, 
                                       onChunk: (chunk: string) => void, 
