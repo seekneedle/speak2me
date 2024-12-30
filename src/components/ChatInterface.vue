@@ -334,8 +334,8 @@ const setupAudioPlayback = () => {
         analyser.value = newAnalyser;
         
         // Initialize 3D Waveform
-        // init3DWaveform();
-        init3DRotatingCircle();
+        init3DWaveform();
+        //init3DRotatingCircle();
       } else {
         console.error('Failed to setup audio graph');
       }
@@ -457,7 +457,7 @@ const init3DWaveform = () => {
 };
 
 // Initialize 3D Rotating Circle Visualization
-const init3DRotatingCircle = () => {
+/* const init3DRotatingCircle = () => {
   if (!waveformCanvas.value) return;
 
   // Cleanup existing scene if it exists
@@ -640,7 +640,7 @@ const init3DRotatingCircle = () => {
       renderer.dispose();
     }
   });
-};
+}; */
 
 // Modify existing sendMessage to pause audio during Q&A
 const sendMessage = async () => {
@@ -1119,7 +1119,7 @@ const stopVoiceVisualization = () => {
 // Lifecycle hooks
 onMounted(() => {
   //setupAudioPlayback();
-  init3DRotatingCircle();
+  //init3DRotatingCircle();
   initializeNlpManager();
 });
 
