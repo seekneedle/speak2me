@@ -5,9 +5,9 @@ import axios, { AxiosProgressEvent } from 'axios';
 import { AudioProcessingManager } from './AudioProcessingManager';
 import { extractJsonObjects } from '../utils/utils';
 import { config } from '../config/config';
-import { containerBootstrap } from '@nlpjs/core';
+//import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
-
+import { initializeNlp } from './NlpManager'
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 //const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
 //const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
@@ -386,7 +386,7 @@ interface NlpResult {
 let nlp: Nlp | null = null;
 
 // Async function to initialize and train the NLP manager
-async function initializeNlp(): Promise<Nlp> {
+/* async function initializeNlp(): Promise<Nlp> {
   const container = await containerBootstrap();
   (container as any).use(Nlp);
   
@@ -427,7 +427,7 @@ async function initializeNlp(): Promise<Nlp> {
     // Optionally, you can add more specific error handling here
   }
   return nlp;
-}
+} */
 
 // Async function to ensure NLP is initialized
 async function ensureNlpInitialized() {
@@ -522,10 +522,10 @@ export function useRAGSystem() {
       .find(msg => msg.role === 'assistant');
 
       // Ensure NLP is initialized
-      const manager = await ensureNlpInitialized();
+      const nlpManager = await ensureNlpInitialized();
   
       // Perform intent classification
-      const result: NlpResult = await manager.process('zh', response);
+      const result: NlpResult = await nlpManager.process('zh', response);
   
       // Check if the intent is classified as 'no'
       if (result.intent !== undefined && 
