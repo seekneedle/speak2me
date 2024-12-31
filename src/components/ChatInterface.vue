@@ -337,6 +337,7 @@ const onAudioLoadStart = () => {
 
 const onAudioMetadataLoaded = () => {
   console.log('Audio metadata loaded at: ' + new Date().toISOString());
+  isAudioElementLoaded.value = true
 }
 
 const onAudioCanPlay = () => {
