@@ -1,4 +1,15 @@
 <template>
+  <!-- Add audio element to template -->
+  <audio 
+      ref="audioElement" 
+      :src="audioFile" 
+      loop 
+      preload="metadata"
+      @loadstart="onAudioLoadStart"
+      @loadedmetadata="onAudioMetadataLoaded"
+      @canplay="onAudioCanPlay"
+      @error="onAudioError"
+    ></audio>
   <!-- Spinning Loader Overlay -->
   <div 
     v-if="!isAudioElementLoaded" 
@@ -319,6 +330,46 @@ const toggleAudioPlayback = () => {
   console.log('New audio playing state:', isAudioPlaying.value);
 };
 
+// Event handlers
+const onAudioLoadStart = () => {
+  console.log('Audio loading started at: ' + new Date().toISOString());
+}
+
+const onAudioMetadataLoaded = () => {
+  console.log('Audio metadata loaded at: ' + new Date().toISOString());
+}
+
+const onAudioCanPlay = () => {
+  console.log('Audio can play at: ' + new Date().toISOString());
+  isAudioElementLoaded.value = true
+}
+
+const onAudioError = (event: Event) => {
+  const audioElement = event.target as HTMLAudioElement
+  console.error('Audio loading error:', audioElement.error)
+  
+  // Detailed error logging
+  switch (audioElement.error?.code) {
+    case MediaError.MEDIA_ERR_ABORTED:
+      console.error('Fetching process aborted')
+      break
+    case MediaError.MEDIA_ERR_NETWORK:
+      console.error('Network error - check audio file URL')
+      break
+    case MediaError.MEDIA_ERR_DECODE:
+      console.error('Decoding error - check audio file format')
+      break
+    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+      console.error('Audio format not supported')
+      break
+    default:
+      console.error('Unknown audio error')
+  }
+
+  alert('Audio loading failed. Please check network and file compatibility.')
+}
+
+/* 
 const setupAudioPlayback = () => {
   console.log('Setting up basic audio playback');
   
@@ -341,7 +392,7 @@ const setupAudioPlayback = () => {
       console.log('Audio can play');
       isAudioElementLoaded.value = true;
     });
-    
+
     audioElement.value.onerror = (e) => {
       console.error('Audio loading error:', e);
       alert('Failed to load audio file. Please check the file path.');
@@ -361,10 +412,10 @@ const setupAudioPlayback = () => {
         //init3DRotatingCircle();
       } else {
         console.error('Failed to setup audio graph');
-      } */
+      } *//*
     });
   }
-};
+}; */
 
 // Initialize 3D Waveform Visualization
 const init3DWaveform = () => {
@@ -1142,7 +1193,7 @@ const stopVoiceVisualization = () => {
 // Lifecycle hooks
 onMounted(() => {
   //isAudioElementLoaded.value = true;
-  setupAudioPlayback();
+  //setupAudioPlayback();
   //init3DRotatingCircle();
   initializeNlpManager();
 });
