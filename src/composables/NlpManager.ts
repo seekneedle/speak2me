@@ -34,6 +34,7 @@ export async function initializeNlp(): Promise<Nlp> {
       nlp.addDocument('zh', utterance, 'intent.yes');
     });
   
+    nlp.settings.autoSave = false;
     // Train the model
     try {
       await nlp.train();
