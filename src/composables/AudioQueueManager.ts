@@ -142,6 +142,7 @@ export class AudioQueueManager {
     private playNext() {
         console.log('playNext');
         if (this.isPlaying || this.queue.length === 0) {
+            console.log('Queue is empty or already playing');
             this.diagnoseAudioContext();
             return;
         }
@@ -180,10 +181,15 @@ export class AudioQueueManager {
         };
 
         if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume().then(() => source.start(0));
+            this.audioContext.resume().then(() => {
+                console.log('AudioContext successfully resumed for playing');
+                source.start(0)
+            });
+            console.log('after resume attempt');
             this.diagnoseAudioContext();
         } else {
             source.start(0);
+            console.log('audioContext is not suspended');
             this.diagnoseAudioContext();
         }
     }
