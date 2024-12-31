@@ -39,6 +39,24 @@ export class AudioQueueManager {
         this.globalOnCompleteCallback = callback;
     }
 
+    private diagnoseAudioContext() {
+        console.log('Audio Context Diagnosis', {
+            state: this.audioContext.state,
+            isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+            userAgent: navigator.userAgent,
+            audioContextSupport: !!(window.AudioContext || (window as any).webkitAudioContext)
+        });
+    
+        // Attempt to resume if suspended
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().then(() => {
+                console.log('AudioContext successfully resumed');
+            }).catch(error => {
+                console.error('Failed to resume AudioContext:', error);
+            });
+        }
+    }
+
     public stopAudioPlayback() {
         if (this.currentSource) {
             this.currentSource.stop();
@@ -78,7 +96,7 @@ export class AudioQueueManager {
                 }
             });
             
-            
+            this.diagnoseAudioContext();
             this.tryProcessQueue();
         });
     }
@@ -86,6 +104,8 @@ export class AudioQueueManager {
     private tryProcessQueue() {
         // Keep track of processed sequences to detect potential stalls
         const processedSequences: number[] = [];
+        console.log('tryProcessQueue');
+        this.diagnoseAudioContext();
 
         while (this.pendingBuffers.has(this.nextToPlay)) {
             const nextBuffer = this.pendingBuffers.get(this.nextToPlay)!;
@@ -120,7 +140,9 @@ export class AudioQueueManager {
     }
 
     private playNext() {
+        console.log('playNext');
         if (this.isPlaying || this.queue.length === 0) {
+            this.diagnoseAudioContext();
             return;
         }
 
@@ -159,8 +181,10 @@ export class AudioQueueManager {
 
         if (this.audioContext.state === 'suspended') {
             this.audioContext.resume().then(() => source.start(0));
+            this.diagnoseAudioContext();
         } else {
             source.start(0);
+            this.diagnoseAudioContext();
         }
     }
 
