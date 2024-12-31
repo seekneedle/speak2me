@@ -325,9 +325,23 @@ const setupAudioPlayback = () => {
   // Create audio element if not exists
   if (!audioElement.value) {
     audioElement.value = new Audio(audioFile);
-    audioElement.value.preload = 'auto';
+    audioElement.value.preload = 'metadata';
     audioElement.value.loop = true;
 
+    // Add more comprehensive event listeners
+    audioElement.value.addEventListener('loadstart', () => {
+      console.log('Audio loading started');
+    });
+
+    audioElement.value.addEventListener('loadedmetadata', () => {
+      console.log('Audio metadata loaded');
+    });
+
+    audioElement.value.addEventListener('canplay', () => {
+      console.log('Audio can play');
+      isAudioElementLoaded.value = true;
+    });
+    
     audioElement.value.onerror = (e) => {
       console.error('Audio loading error:', e);
       alert('Failed to load audio file. Please check the file path.');
