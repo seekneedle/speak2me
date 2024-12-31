@@ -1,4 +1,11 @@
 <template>
+  <!-- Spinning Loader Overlay -->
+  <div 
+    v-if="!isAudioElementLoaded" 
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+  >
+    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+  </div>
   <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden responsive-container">
     <div class="flex flex-col md:flex-row h-auto md:h-[600px]">
       <!-- Waveform Display -->
@@ -163,6 +170,7 @@ import {
 // Audio and visualization refs
 const waveformCanvas = ref<HTMLCanvasElement | null>(null);
 const audioElement = ref<HTMLAudioElement | null>(null);
+const isAudioElementLoaded = ref(false);
 const isAudioPlaying = ref(false);
 const messagesContainer = ref<HTMLDivElement | null>(null);
 
@@ -266,25 +274,24 @@ const toggleAudioPlayback = () => {
 
   if (!audioElement.value) {
     console.log('No audio element, setting up playback');
-    setupAudioPlayback();
+    // setupAudioPlayback();
     // Start audio playback
-    startAudioPlayback();
+    // startAudioPlayback();
     return;
   }
 
   try {
     if (audioElement.value.paused) {
       console.log('Audio is paused, attempting to play');
-      audioElement.value.play()
-        .then(() => {
-          isAudioPlaying.value = true;
-          console.log('Audio started playing');
-        })
-        .catch((error) => {
-          console.error('Error playing audio:', error);
+      try{
+        audioElement.value.play();       
+        isAudioPlaying.value = true;
+        console.log('Audio started playing');
+      } catch (playError) {
+          console.error('Error playing audio:', playError);
           alert('Please interact with the page to enable audio playback.');
           isAudioPlaying.value = false;
-        });
+      }
     } else {
       console.log('Audio is playing, attempting to pause');
       
@@ -328,8 +335,10 @@ const setupAudioPlayback = () => {
 
     // Initialize 3D Waveform after audio is loaded
     audioElement.value.addEventListener('canplaythrough', () => {
+      console.log('Audio element loaded at: ' + new Date().toISOString());
+      isAudioElementLoaded.value = true;
       // Setup audio graph and only proceed if successful
-      const newAnalyser = setupAudioGraph(audioElement.value);
+      /* const newAnalyser = setupAudioGraph(audioElement.value);
       if (newAnalyser) {
         analyser.value = newAnalyser;
         
@@ -338,7 +347,7 @@ const setupAudioPlayback = () => {
         //init3DRotatingCircle();
       } else {
         console.error('Failed to setup audio graph');
-      }
+      } */
     });
   }
 };
@@ -1118,7 +1127,8 @@ const stopVoiceVisualization = () => {
 
 // Lifecycle hooks
 onMounted(() => {
-  //setupAudioPlayback();
+  //isAudioElementLoaded.value = true;
+  setupAudioPlayback();
   //init3DRotatingCircle();
   initializeNlpManager();
 });
@@ -1182,6 +1192,11 @@ watch(shouldResumeAudio, (newValue) => {
     // Reset the flag
     shouldResumeAudio.value = false;
   }
+});
+
+// Add watch function for isAudioElementLoaded
+watch(isAudioElementLoaded, (newValue) => {
+  console.log(`Audio element loaded status changed at ${new Date().toISOString()}: ${newValue}`);
 });
 </script>
 
