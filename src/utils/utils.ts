@@ -87,3 +87,8 @@ export async function getAuthToken(): Promise<string> {
     return Promise.reject(error);
   }
 }
+
+// Detect mobile device
+export const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}

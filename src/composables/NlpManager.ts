@@ -1,7 +1,7 @@
 import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
 
-export async function initializeNlp(): Promise<Nlp> {
+export async function createNlp(): Promise<Nlp> {
     const container = await containerBootstrap();
     (container as any).use(Nlp);
     
