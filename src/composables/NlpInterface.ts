@@ -1,14 +1,14 @@
 // src/composables/NlpInterface.ts
 import { Nlp } from '@nlpjs/nlp';
-import { containerBootstrap } from '@nlpjs/core';
+//import { containerBootstrap } from '@nlpjs/core';
 import { SimplifiedNlpManager } from './SimplifiedNlpManager'
 import { createNlp } from './NlpManager';
 
 // Abstract interface for NLP functionality
 export interface INlpManager {
   train(): Promise<void>;
-  process(text: string, language?: string): Promise<{
-    intent: string;
+  process(text: string, language: string): Promise<{
+    intent?: string;
     score?: number;
     // Add other potential return fields
   }>;
@@ -31,8 +31,8 @@ export class NlpManagerWrapper implements INlpManager {
     }
   }
 
-  async process(text: string, language?: string): Promise<{
-    intent: string;
+  async process(text: string, language: string): Promise<{
+    intent?: string;
     score?: number;
   }> {
     if (this.nlpInstance instanceof SimplifiedNlpManager) {
@@ -107,7 +107,7 @@ export async function createNlpManager(isMobile: boolean = false): Promise<NlpMa
 
   await nlp.train();
  */
-  return new NlpManagerWrapper(createNlp());
+  return new NlpManagerWrapper(await createNlp());
 }
 
 // Modify your existing initialization function

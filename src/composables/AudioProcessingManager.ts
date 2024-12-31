@@ -2,6 +2,7 @@ import { AudioQueueManager } from './AudioQueueManager';
 import { generateSpeech } from './Text2Speech';
 
 const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
+const globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 export class AudioProcessingManager {
     // Static instance variable
     private static instance: AudioProcessingManager;
@@ -15,10 +16,11 @@ export class AudioProcessingManager {
     
     private sentenceSequence = 0;  // Add this line to track full sentence count
     // Create audio context and source for decoding
-    private audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    private audioQueueManager = AudioQueueManager.getInstance();
+    private audioContext: AudioContext;
+    //private audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    private audioQueueManager = AudioQueueManager.getInstance(globalAudioContext);
     // Private constructor to prevent direct instantiation
-    private constructor() {}
+    private constructor() {this.audioContext = globalAudioContext;}
     private globalOnCompleteCallback: (() => void) | null = null;
   
     // Static method to get the singleton instance

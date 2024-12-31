@@ -19,13 +19,14 @@ export class AudioQueueManager {
     // New property to store a single global onComplete callback
     private globalOnCompleteCallback: (() => void) | null = null;
 
-    private constructor() {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    private constructor(sharedAudioContext: AudioContext) {
+        this.audioContext = sharedAudioContext;
+        //this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
-    public static getInstance(): AudioQueueManager {
+    public static getInstance(sharedAudioContext: AudioContext): AudioQueueManager {
         if (!AudioQueueManager.instance) {
-            AudioQueueManager.instance = new AudioQueueManager();
+            AudioQueueManager.instance = new AudioQueueManager(sharedAudioContext);
         }
         return AudioQueueManager.instance;
     }
