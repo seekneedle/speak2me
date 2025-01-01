@@ -2,7 +2,7 @@
 import { Nlp } from '@nlpjs/nlp';
 //import { containerBootstrap } from '@nlpjs/core';
 import { SimplifiedNlpManager } from './SimplifiedNlpManager'
-import { createNlp } from './NlpManager';
+import { createNlp } from './AxaNlpManager';
 
 // Abstract interface for NLP functionality
 export interface INlpManager {
@@ -31,15 +31,15 @@ export class NlpManagerWrapper implements INlpManager {
     }
   }
 
-  async process(text: string, language: string): Promise<{
+  async process(language: string, text: string): Promise<{
     intent?: string;
     score?: number;
   }> {
     if (this.nlpInstance instanceof SimplifiedNlpManager) {
-      const intent = this.nlpInstance.getIntent(text)
+      const result = this.nlpInstance.getIntent(text)
       return {
-        intent,
-        score: 1 // Simplified version always returns full confidence
+        intent: result.intent,
+        score: result.score
       }
     } else {
       // For nlp.js, use its native processing

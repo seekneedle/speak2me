@@ -27,14 +27,14 @@ const props = defineProps<{
 }>()
 
 // Configure marked with syntax highlighting
-marked.setOptions({
+/* marked.setOptions({
   highlight: function(code, lang) {
     if (lang && hljs.getLanguage(lang)) {
       return hljs.highlight(code, { language: lang }).value
     }
     return hljs.highlightAuto(code).value
   }
-})
+}) */
 
 const formattedContent = computed(() => {
   return marked(props.message.content)
