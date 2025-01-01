@@ -1,7 +1,9 @@
+import { audioContext } from './UseAudioContext'
+
 // Manages sequential audio playback
 export class AudioQueueManager {
     private static instance: AudioQueueManager;
-    private audioContext: AudioContext;
+    //private audioContext: AudioContext;
     private queue: Array<{
         buffer: AudioBuffer;
         onComplete: () => void;
@@ -19,14 +21,14 @@ export class AudioQueueManager {
     // New property to store a single global onComplete callback
     private globalOnCompleteCallback: (() => void) | null = null;
 
-    private constructor(sharedAudioContext: AudioContext) {
-        this.audioContext = sharedAudioContext;
+    private constructor(/*sharedAudioContext: AudioContext*/) {
+        //this.audioContext = sharedAudioContext;
         //this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
-    public static getInstance(sharedAudioContext: AudioContext): AudioQueueManager {
+    public static getInstance(): AudioQueueManager {
         if (!AudioQueueManager.instance) {
-            AudioQueueManager.instance = new AudioQueueManager(sharedAudioContext);
+            AudioQueueManager.instance = new AudioQueueManager();
         }
         return AudioQueueManager.instance;
     }
@@ -42,15 +44,15 @@ export class AudioQueueManager {
 
     private diagnoseAudioContext() {
         console.log('Audio Context Diagnosis', {
-            state: this.audioContext.state,
+            state: audioContext.state,
             isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
             userAgent: navigator.userAgent,
             audioContextSupport: !!(window.AudioContext || (window as any).webkitAudioContext)
         });
     
         // Attempt to resume if suspended
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume().then(() => {
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
                 console.log('AudioContext successfully resumed');
             }).catch(error => {
                 console.error('Failed to resume AudioContext:', error);
@@ -151,9 +153,9 @@ export class AudioQueueManager {
         this.isPlaying = true;
         const { buffer, onComplete } = this.queue[0];
         
-        const source = this.audioContext.createBufferSource();
+        const source = audioContext.createBufferSource();
         source.buffer = buffer;
-        source.connect(this.audioContext.destination);
+        source.connect(audioContext.destination);
         
         // Store current source for stop functionality
         this.currentSource = source;
@@ -181,8 +183,8 @@ export class AudioQueueManager {
             }
         };
 
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume().then(() => {
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
                 console.log('AudioContext successfully resumed for playing');
                 source.start(0)
             });

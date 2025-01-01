@@ -159,7 +159,7 @@
 import { ref, onMounted, nextTick, computed, onUnmounted, watch } from 'vue';
 import ChatMessage from './ChatMessage.vue';
 import { useRAGSystem } from '../composables/useRAGSystem';
-import { 
+/* import { 
   Scene, 
   PerspectiveCamera, 
   WebGLRenderer, 
@@ -176,7 +176,7 @@ import {
   ShaderMaterial,
   Color,
   Mesh 
-} from 'three';
+} from 'three'; */
 
 // Audio and visualization refs
 const waveformCanvas = ref<HTMLCanvasElement | null>(null);
@@ -201,23 +201,23 @@ const {
 const userInput = ref('');
 
 // Reactive references for Three.js objects
-let camera: PerspectiveCamera | null = null  //相机
+/* let camera: PerspectiveCamera | null = null  //相机
 let scene: Scene | null = null  //场景
 let renderer: WebGLRenderer | null = null  //渲染器
 let waveformMesh: Line | null = null  //波形网格
-let rotatingCircleMesh: Mesh | null = null  // New mesh for rotating circle
+let rotatingCircleMesh: Mesh | null = null  // New mesh for rotating circle */
 const analyser = ref<AnalyserNode | null>(null);
-const animationFrameId = ref<number | null>(null);
+//const animationFrameId = ref<number | null>(null);
 
 // Reactive or global variable to store audio context and source
-let globalAudioContext: AudioContext | null = null;
+/* let globalAudioContext: AudioContext | null = null;
 let globalAudioSource: MediaElementAudioSourceNode | null = null;
 let globalGainNode: GainNode | null = null;
-let isAudioSetup = false;
+let isAudioSetup = false; */
 const audioFile = './res/liaojin.mp3'
-
+import { audioContext } from '../composables/UseAudioContext'
 // Setup audio graph once
-const setupAudioGraph = (audioElement: HTMLAudioElement | null): AnalyserNode | null => {
+/* const setupAudioGraph = (audioElement: HTMLAudioElement | null): AnalyserNode | null => {
   // Return null if no audio element provided
   if (!audioElement) return null;
 
@@ -261,10 +261,10 @@ const setupAudioGraph = (audioElement: HTMLAudioElement | null): AnalyserNode | 
   isAudioSetup = true;
 
   return analyser;
-};
+}; */
 
 // Add a method to start audio playback
-const startAudioPlayback = () => {
+/* const startAudioPlayback = () => {
   if (audioElement.value) {
     audioElement.value.play()
         .then(() => {
@@ -277,11 +277,11 @@ const startAudioPlayback = () => {
           isAudioPlaying.value = false;
         });
   }
-};
+}; */
 
 // Toggle audio playback with user interaction
 const toggleAudioPlayback = () => {
-
+  resumeAudioContext();
 
   if (!audioElement.value) {
     console.log('No audio element, setting up playback');
@@ -419,7 +419,7 @@ const setupAudioPlayback = () => {
 }; */
 
 // Initialize 3D Waveform Visualization
-const init3DWaveform = () => {
+/* const init3DWaveform = () => {
   if (!waveformCanvas.value || !audioElement.value) return;
 
   // Scene setup
@@ -529,7 +529,7 @@ const init3DWaveform = () => {
 
   // Start animation immediately after initialization
   animate();
-};
+}; */
 
 // Initialize 3D Rotating Circle Visualization
 /* const init3DRotatingCircle = () => {
@@ -740,7 +740,42 @@ const buttonText = computed(() => {
   return isLoading.value ? 'Thinking...' : 'Send';
 });
 
+
+const resumeAudioContext = async() => {
+  try {
+    // Check if audioContext is closed or in an invalid state
+    if (audioContext.state === 'closed') {
+      console.warn('AudioContext is closed. Recreating...');
+      // Reimport to get a fresh global AudioContext
+      const { audioContext: newAudioContext } = await import('../composables/UseAudioContext');
+      Object.assign(audioContext, newAudioContext);
+    }
+
+    if (audioContext.state === 'suspended') {
+      console.log('AudioContext is suspended. Attempting to resume...');
+      await audioContext.resume();
+      console.log('AudioContext resumed successfully');
+    }
+  } catch (error) {
+    console.error('Error handling AudioContext:', error);
+    
+    // Fallback: force create a new AudioContext if all else fails
+    try {
+      const newContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      Object.assign(audioContext, newContext);
+      await audioContext.resume();
+      console.log('Forcefully created new AudioContext');
+    } catch (fallbackError) {
+      console.error('Failed to create new AudioContext:', fallbackError);
+    }
+  }
+}
+
+
+
 const handleButtonClick = async () => {
+  // Resume AudioContext if it's suspended
+  resumeAudioContext(); 
   if (!userInput.value.trim()) return;
   //stop the current streaming of answser text,
   //and get ready for taking care of the new input
@@ -778,7 +813,7 @@ const isListening = ref(false);
 const transcriptText = ref('');
 const voiceWaveCanvas = ref<HTMLCanvasElement | null>(null);
 let speechRecognition: SpeechRecognition | null = null;
-let audioContext: AudioContext | null = null;
+//let audioContext: AudioContext | null = null;
 let speechRecognitionAnalyser: AnalyserNode | null = null;
 
 const initializeSpeechRecognition = () => {
@@ -886,6 +921,7 @@ const initializeSpeechRecognition = () => {
 };
 
 const toggleSpeechRecognition = () => {
+  resumeAudioContext();
   if (!speechRecognition) {
     speechRecognition = initializeSpeechRecognition();
   }
@@ -928,12 +964,12 @@ const startVoiceVisualization = () => {
     console.log('startVoiceVisualization');
     
     // Close any existing audio context to prevent multiple contexts
-    if (audioContext) {
+    /* if (audioContext) {
       audioContext.close();
-    }
+    } */
 
     // Initialize audio context and analyser
-    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    //audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     
     // Request microphone access
     navigator.mediaDevices.getUserMedia({ audio: true })
@@ -1185,8 +1221,8 @@ const startVoiceVisualization = () => {
 
 const stopVoiceVisualization = () => {
   if (audioContext) {
-    audioContext.close();
-    audioContext = null;
+    //audioContext.close();
+   //audioContext = null;
   }
   speechRecognitionAnalyser = null;
 };
@@ -1201,11 +1237,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   // Cleanup Three.js resources
-  if (animationFrameId.value) {
+/*   if (animationFrameId.value) {
     cancelAnimationFrame(animationFrameId.value);
-  }
+  } */
 
-  if (scene) {
+/*   if (scene) {
     scene.traverse((object: Object3D) => {
       if (object instanceof Mesh) {
         object.geometry.dispose();
@@ -1218,20 +1254,21 @@ onUnmounted(() => {
         }
       }
     });
-  }
+  } */
 
   // Dispose of renderer
-  if (renderer) {
+/*   if (renderer) {
     renderer.dispose();
     renderer = null;
-  }
+  } */
 
   // Clear other references
-  scene = null;
+/*   scene = null;
   camera = null;
   waveformMesh = null;
+  rotatingCircleMesh = null; */
   analyser.value = null;
-  rotatingCircleMesh = null;
+  
 });
 
 // Add this near your other watch functions

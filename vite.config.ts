@@ -11,6 +11,11 @@ export default defineConfig({
     open: true
   })],
   base: '/',
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

@@ -1,8 +1,9 @@
 import { AudioQueueManager } from './AudioQueueManager';
 import { generateSpeech } from './Text2Speech';
+import { audioContext } from './UseAudioContext'
 
 const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
-const globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+//const globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 export class AudioProcessingManager {
     // Static instance variable
     private static instance: AudioProcessingManager;
@@ -16,11 +17,11 @@ export class AudioProcessingManager {
     
     private sentenceSequence = 0;  // Add this line to track full sentence count
     // Create audio context and source for decoding
-    private audioContext: AudioContext;
+    //private audioContext: AudioContext;
     //private audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    private audioQueueManager = AudioQueueManager.getInstance(globalAudioContext);
+    private audioQueueManager = AudioQueueManager.getInstance();
     // Private constructor to prevent direct instantiation
-    private constructor() {this.audioContext = globalAudioContext;}
+    private constructor() {}
     private globalOnCompleteCallback: (() => void) | null = null;
   
     // Static method to get the singleton instance
@@ -78,12 +79,12 @@ export class AudioProcessingManager {
         
         // Attempt to decode audio data with error handling
         const decodingAttempts: (() => Promise<AudioBuffer>)[] = [
-          () => this.audioContext.decodeAudioData(buffer),
-          () => this.audioContext.decodeAudioData(audioBufferCopy),
+          () => audioContext.decodeAudioData(buffer),
+          () => audioContext.decodeAudioData(audioBufferCopy),
           async () => {
             const blob = new Blob([audioBufferCopy], { type: 'audio/mp3' });
             const arrayBuffer = await blob.arrayBuffer();
-            return this.audioContext.decodeAudioData(arrayBuffer);
+            return audioContext.decodeAudioData(arrayBuffer);
           }
         ];
   
@@ -94,8 +95,8 @@ export class AudioProcessingManager {
         }
   
         // Ensure audio context is in the right state
-        if (this.audioContext.state === 'suspended') {
-          this.audioContext.resume().catch(console.error);
+        if (audioContext.state === 'suspended') {
+          audioContext.resume().catch(console.error);
         }
   
         // Use the helper method to attempt decoding
