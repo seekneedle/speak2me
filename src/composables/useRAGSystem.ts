@@ -496,6 +496,7 @@ export function useRAGSystem() {
   
       // Perform intent classification
       const result: NlpResult = await nlpManager.process('zh', response);
+      console.log('IntentionHook: result', result);
   
       // Check if the intent is classified as 'no'
       if (result.intent !== undefined && 
@@ -506,7 +507,7 @@ export function useRAGSystem() {
         console.log('IntentionHook: ' + latestAssistantMessage?.content);
         if (latestAssistantMessage && 
           latestAssistantMessage.content === assistantMessage) {
-          console.log('IntentionHook: ' + assistantMessage);
+          console.log('IntentionHook, intent.no replied to ' + assistantMessage);
           // Resume audio playback
           shouldResumeAudio.value = true;
           return false;

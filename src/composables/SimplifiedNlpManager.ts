@@ -14,7 +14,7 @@ export class SimplifiedIntentClassifier {
     'intent.no': [
       
       '不', '不是', '不行', '不要','不用', '不需要', '无',
-      '否', '不想', '没有了','停', '停止', '算了', '没了'
+      '否', '不想', '没有了', '停', '停止', '算了', '没了'
     ],
     'intent.start': [
       
@@ -33,7 +33,8 @@ export class SimplifiedIntentClassifier {
     console.log('Normalized text:', normalizedText);
     // Check for exact matches first
     for (const [intent, keywords] of Object.entries(this.intents)) {
-      if (keywords.some(keyword => normalizedText.includes(keyword))) {
+      if (keywords.some(keyword => normalizedText === keyword)) {
+        console.log(`${normalizedText} has exact match found for intent "${intent}"`);
         return { intent, score: 1 }; // Exact match found, return intent
       }
     }
