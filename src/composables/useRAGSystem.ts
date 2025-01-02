@@ -312,12 +312,13 @@ async function makeStreamQueryRequest(question: string,
         async (progressEvent: AxiosProgressEvent) => {
         
           return requestMutex.runExclusive(async () => {
+            console.log('Mutex exclusive block started at:', new Date().toISOString());
             if (progressEvent.event && progressEvent.event.target) {
               const target = progressEvent.event.target as XMLHttpRequest;
     
               const responseText = target.responseText.slice(seenBytes || 0);
               seenBytes = target.responseText.length;
-              console.log('responseText: ', responseText);
+              //console.log('responseText: ', responseText);
               if (responseText) {
                 const jsonObjects = extractJsonObjects(responseText);
     
@@ -331,6 +332,7 @@ async function makeStreamQueryRequest(question: string,
     
                 for (const chunk of chunksArray) {
                   try {
+                    console.log('Processing chunk:', chunk);
                     // Only display text if shouldDisplayText is true
                     if (shouldDisplayText.value) {
                       onChunk(chunk);
@@ -359,6 +361,7 @@ async function makeStreamQueryRequest(question: string,
                 }
               }
             }
+            console.log('Mutex exclusive block ended at:', new Date().toISOString());
           });
         }
         

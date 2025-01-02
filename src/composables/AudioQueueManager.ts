@@ -99,7 +99,7 @@ export class AudioQueueManager {
                 }
             });
             
-            this.diagnoseAudioContext();
+            //this.diagnoseAudioContext();
             this.tryProcessQueue();
         });
     }
@@ -108,7 +108,7 @@ export class AudioQueueManager {
         // Keep track of processed sequences to detect potential stalls
         const processedSequences: number[] = [];
         console.log('tryProcessQueue');
-        this.diagnoseAudioContext();
+        //this.diagnoseAudioContext();
 
         while (this.pendingBuffers.has(this.nextToPlay)) {
             const nextBuffer = this.pendingBuffers.get(this.nextToPlay)!;
@@ -146,7 +146,7 @@ export class AudioQueueManager {
         console.log('playNext');
         if (this.isPlaying || this.queue.length === 0) {
             console.log('Queue is empty or already playing');
-            this.diagnoseAudioContext();
+            //this.diagnoseAudioContext();
             return;
         }
 
@@ -189,11 +189,11 @@ export class AudioQueueManager {
                 source.start(0)
             });
             console.log('after resume attempt');
-            this.diagnoseAudioContext();
+            //this.diagnoseAudioContext();
         } else {
             source.start(0);
             console.log('audioContext is not suspended');
-            this.diagnoseAudioContext();
+            //this.diagnoseAudioContext();
         }
     }
 

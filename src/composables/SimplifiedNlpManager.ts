@@ -34,7 +34,7 @@ export class SimplifiedIntentClassifier {
     // Check for exact matches first
     for (const [intent, keywords] of Object.entries(this.intents)) {
       if (keywords.some(keyword => normalizedText === keyword)) {
-        console.log(`${normalizedText} has exact match found for intent "${intent}"`);
+        //console.log(`${normalizedText} has exact match found for intent "${intent}"`);
         return { intent, score: 1 }; // Exact match found, return intent
       }
     }
@@ -52,14 +52,14 @@ export class SimplifiedIntentClassifier {
       );
       
       const maxScore = Math.max(...matchScores);
-      console.log(`Max score for intent "${intent}": ${maxScore}`);
+      //console.log(`Max score for intent "${intent}": ${maxScore}`);
       if (maxScore >= threshold) {
         if (!bestMatch || maxScore > bestMatch.score) {
           bestMatch = { intent, score: maxScore };
         }
       }
     }
-    console.log('Best match:', bestMatch?.intent);
+    //console.log('Best match:', bestMatch?.intent);
     return bestMatch || { intent: 'intent.unknown', score: 0 };
     
   }
