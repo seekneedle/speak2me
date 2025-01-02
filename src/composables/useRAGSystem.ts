@@ -311,8 +311,9 @@ async function makeStreamQueryRequest(question: string,
       onDownloadProgress: 
         async (progressEvent: AxiosProgressEvent) => {
         
-          return requestMutex.runExclusive(async () => {
-            console.log('Mutex exclusive block started at:', new Date().toISOString());
+          //return requestMutex.runExclusive(
+            //async () => {
+            //console.log('Mutex exclusive block started at:', new Date().toISOString());
             if (progressEvent.event && progressEvent.event.target) {
               const target = progressEvent.event.target as XMLHttpRequest;
     
@@ -361,8 +362,9 @@ async function makeStreamQueryRequest(question: string,
                 }
               }
             }
-            console.log('Mutex exclusive block ended at:', new Date().toISOString());
-          });
+            //console.log('Mutex exclusive block ended at:', new Date().toISOString());
+          //}
+        //);
         }
         
     };
@@ -441,6 +443,8 @@ export function useRAGSystem() {
     shouldDisplayText.value = false;
     await audioProcessor.stopAudioPlayback(); 
     console.log('Audio stopped at:', new Date().toISOString());
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log('timeout at:', new Date().toISOString());
   };
 
   async function getResponse(question: string) {
