@@ -8,7 +8,9 @@ import {isMobileDevice} from '../utils/utils';
 import { config } from '../config/config';
 //import { containerBootstrap } from '@nlpjs/core';
 import { Nlp } from '@nlpjs/nlp';
+import { Mutex } from 'async-mutex'; // Explicit import of Mutex from async-mutex
 
+const requestMutex = new Mutex();
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
 //const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
 //const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
@@ -233,6 +235,8 @@ const systemTemplate = '# 角色:你的交流风格简练而专业。\
   }
 } */
 
+
+
 const audioProcessor = AudioProcessingManager.getInstance();
 
 /* async function makeNormalQueryRequest(question: string): Promise<string> {
@@ -304,57 +308,60 @@ async function makeStreamQueryRequest(question: string,
         'Access-Control-Allow-Origin': '*'
       },
       responseType: 'stream' as const,
-      onDownloadProgress: async (progressEvent: AxiosProgressEvent) => {
-        //console.log('Full progressEvent structure:', JSON.stringify(progressEvent, null, 2));
+      onDownloadProgress: 
+        async (progressEvent: AxiosProgressEvent) => {
         
-        if (progressEvent.event && progressEvent.event.target) {
-          const target = progressEvent.event.target as XMLHttpRequest;
-
-          const responseText = target.responseText.slice(seenBytes || 0);
-          seenBytes = target.responseText.length;
-          console.log('responseText: ', responseText);
-          if (responseText) {
-            const jsonObjects = extractJsonObjects(responseText);
-
-            const chunks = jsonObjects
-              .map((obj) => obj.data?.content || '')
-              .filter((content: string) => content.trim() !== '');
-
-            const chunksArray = chunks.flatMap((chunk) => chunk.split('\n').filter(Boolean));
-            console.log('getting response at: ', new Date().toISOString());
-            onStart?.();
-
-            for (const chunk of chunksArray) {
-              try {
-                // Only display text if shouldDisplayText is true
-                if (shouldDisplayText.value) {
-                  onChunk(chunk);
-                  
-                  // Process audio in background
-                  await audioProcessor.processAudioChunk(chunk);
-                } else {
-                  //audioProcessor.stopAudioPlayback(); 
-                  isInterrupted = true;
-                  console.log(`Question (${question}) isInterrupted at: `, new Date().toISOString());
-                  // leave the unattended content 
-                  break;
+          return requestMutex.runExclusive(async () => {
+            if (progressEvent.event && progressEvent.event.target) {
+              const target = progressEvent.event.target as XMLHttpRequest;
+    
+              const responseText = target.responseText.slice(seenBytes || 0);
+              seenBytes = target.responseText.length;
+              console.log('responseText: ', responseText);
+              if (responseText) {
+                const jsonObjects = extractJsonObjects(responseText);
+    
+                const chunks = jsonObjects
+                  .map((obj) => obj.data?.content || '')
+                  .filter((content: string) => content.trim() !== '');
+    
+                const chunksArray = chunks.flatMap((chunk) => chunk.split('\n').filter(Boolean));
+                console.log('getting response at: ', new Date().toISOString());
+                onStart?.();
+    
+                for (const chunk of chunksArray) {
+                  try {
+                    // Only display text if shouldDisplayText is true
+                    if (shouldDisplayText.value) {
+                      onChunk(chunk);
+                      
+                      // Process audio in background
+                      await audioProcessor.processAudioChunk(chunk);
+                    } else {
+                      //audioProcessor.stopAudioPlayback(); 
+                      isInterrupted = true;
+                      console.log(`Question (${question}) isInterrupted at: `, new Date().toISOString());
+                      // leave the unattended content 
+                      break;
+                    }
+                  } catch (chunkError) {
+                    console.error('Error processing stream chunk:', {
+                      error: chunkError,
+                      chunkLength: chunk?.length ?? 0
+                    });
+                  }
                 }
-              } catch (chunkError) {
-                console.error('Error processing stream chunk:', {
-                  error: chunkError,
-                  chunkLength: chunk?.length ?? 0
-                });
+                shouldDisplayText.value = true;
+                // Check if all content has been retrieved
+                if (target.readyState === 4 && target.status === 200 && !isInterrupted) {
+                  console.log('All content retrieved at:', new Date().toISOString());
+                  onComplete?.();
+                }
               }
             }
-            shouldDisplayText.value = true;
-            // Check if all content has been retrieved
-            if (target.readyState === 4 && target.status === 200 && !isInterrupted) {
-              console.log('All content retrieved at:', new Date().toISOString());
-              onComplete?.();
-            }
-          }
+          });
         }
-      }
+        
     };
 
     try {
