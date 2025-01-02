@@ -717,7 +717,6 @@ const setupAudioPlayback = () => {
   });
 }; */
 
-// Modify existing sendMessage to pause audio during Q&A
 const sendMessage = async () => {
   if (!userInput.value.trim()) return;
 
@@ -780,7 +779,7 @@ const handleButtonClick = async () => {
   //stop the current streaming of answser text,
   //and get ready for taking care of the new input
   if (isAssistantSpeaking.value) {
-    stopStreaming();
+    await stopStreaming();
   }
   
   // Use await to check if the message should be sent

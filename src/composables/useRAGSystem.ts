@@ -305,7 +305,7 @@ async function makeStreamQueryRequest(question: string,
       },
       responseType: 'stream' as const,
       onDownloadProgress: async (progressEvent: AxiosProgressEvent) => {
-        console.log('Full progressEvent structure:', JSON.stringify(progressEvent, null, 2));
+        //console.log('Full progressEvent structure:', JSON.stringify(progressEvent, null, 2));
         
         if (progressEvent.event && progressEvent.event.target) {
           const target = progressEvent.event.target as XMLHttpRequest;
@@ -333,9 +333,9 @@ async function makeStreamQueryRequest(question: string,
                   // Process audio in background
                   await audioProcessor.processAudioChunk(chunk);
                 } else {
-                  audioProcessor.stopAudioPlayback(); 
+                  //audioProcessor.stopAudioPlayback(); 
                   isInterrupted = true;
-                  console.log('Audio playback stopped at:', new Date().toISOString());
+                  console.log(`isInterrupted became ${isInterrupted} at: `, new Date().toISOString());
                   // leave the unattended content 
                   break;
                 }
@@ -426,8 +426,11 @@ export function useRAGSystem() {
   ]);
   const error = ref<string | null>(null);
 
-  const stopStreaming = () => {
+  const stopStreaming = async () => {
+    console.log('Answer interrupted at:', new Date().toISOString());
     shouldDisplayText.value = false;
+    await audioProcessor.stopAudioPlayback(); 
+    console.log('Audio stopped at:', new Date().toISOString());
   };
 
   async function getResponse(question: string) {
