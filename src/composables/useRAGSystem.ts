@@ -280,7 +280,13 @@ async function makeStreamQueryRequest(question: string,
                                       onComplete?: () => void): Promise<void> {
   let isInterrupted: boolean = false;                                    
   audioProcessor.reset();
-  //shouldDisplayText.value = true;
+  //On mobile device, it seems that there is no multiple entrance
+  //into this function, the second call to this function will simply
+  //purge the previous call. 
+  if (isMobileDevice()) {
+    shouldDisplayText.value = true;
+  }
+  
   const requestBody = {
     id: config.bailian.indexId, // knowledge base id
     messages: [
