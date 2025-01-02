@@ -335,7 +335,7 @@ async function makeStreamQueryRequest(question: string,
                 } else {
                   //audioProcessor.stopAudioPlayback(); 
                   isInterrupted = true;
-                  console.log(`isInterrupted became ${isInterrupted} at: `, new Date().toISOString());
+                  console.log(`Question (${question}) isInterrupted at: `, new Date().toISOString());
                   // leave the unattended content 
                   break;
                 }

@@ -46,7 +46,7 @@ export class SimplifiedIntentClassifier {
       const matchScores = keywords.map(keyword => {
         //chineseSimilarity(normalizedText, keyword);
         const similarity = chineseSimilarity(normalizedText, keyword);
-        console.log(`Similarity between "${normalizedText}" and "${keyword}": ${similarity}`);
+        //console.log(`Similarity between "${normalizedText}" and "${keyword}": ${similarity}`);
         return similarity;
       }
       );
