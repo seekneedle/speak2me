@@ -807,13 +807,17 @@ const scrollToBottom = async () => {
   }
 };
 
+import { SpeechRecognitionManager } from '@/composables/SpeechRecognitionManager';
 // Speech Recognition Setup
 const isListening = ref(false);
 const transcriptText = ref('');
 const voiceWaveCanvas = ref<HTMLCanvasElement | null>(null);
 let speechRecognition: SpeechRecognition | null = null;
+let customSpeechManager: SpeechRecognitionManager | null = null;
 //let audioContext: AudioContext | null = null;
 let speechRecognitionAnalyser: AnalyserNode | null = null;
+let speechWebAPI = false;
+let speechTimeout: number | null = null;
 
 const initializeSpeechRecognition = () => {
   // Check browser support with multiple prefixes
@@ -840,7 +844,7 @@ const initializeSpeechRecognition = () => {
     
     console.log('Speech Recognition Language:', recognition.lang);
 
-    let speechTimeout: number | null = null;
+    //let speechTimeout: number | null = null;
 
     recognition.onstart = () => {
       console.log('Speech recognition started');
@@ -894,7 +898,7 @@ const initializeSpeechRecognition = () => {
           alert('Network error occurred. Check your internet connection.');
           break;
         default:
-          alert(`Speech recognition error: ${event.error}`);
+          //alert(`Speech recognition error: ${event.error}`);
       }
       
       isListening.value = false;
@@ -921,32 +925,101 @@ const initializeSpeechRecognition = () => {
 
 const toggleSpeechRecognition = () => {
   resumeAudioContext();
-  if (!speechRecognition) {
-    speechRecognition = initializeSpeechRecognition();
+  if (speechWebAPI) {
+    if (!speechRecognition) {
+      speechRecognition = initializeSpeechRecognition();
+    }
+
+    if (!isListening.value) {
+      startSpeechRecognition();
+    } else {
+      stopSpeechRecognition();
+    }
+  } else {
+    customSpeechManager = SpeechRecognitionManager.getInstance()
+      .onStart(() => {
+        console.log('Speech recognition started');
+        isListening.value = true;
+      })
+      .onEnd(() => {
+        console.log('Speech recognition ended');
+      
+        if (speechTimeout) {
+          clearTimeout(speechTimeout);
+        }
+      
+        isListening.value = false;
+        stopVoiceVisualization();
+
+      })
+      .onResult((text: string) => {
+        console.log('Speech Recognition Result:', text);
+        // Clear any existing timeout
+        if (speechTimeout) {
+          clearTimeout(speechTimeout);
+        }
+        // Process recognized text
+        if (text) {
+          transcriptText.value = text;
+          userInput.value = text;
+        }
+        // Set a new timeout to stop recognition if no speech is detected
+        speechTimeout = setTimeout(() => {
+          console.log('Speech timeout triggered');
+          stopSpeechRecognition();
+        }, 2000) as unknown as number;
+      })
+      .onError((error: string) => {
+        console.error('Speech recognition error:', error);
+        //alert('Speech recognition error: ' + error);
+        isListening.value = false;
+      });
+    if (!isListening.value) {
+      startSpeechRecognition();
+    } else {
+      stopSpeechRecognition();
+    }  
   }
 
-  if (!isListening.value) {
-    startSpeechRecognition();
-  } else {
-    stopSpeechRecognition();
-  }
 };
 
 const startSpeechRecognition = () => {
-  if (speechRecognition) {
-    console.log('startSpeechRecognition');
+  console.log('startSpeechRecognition');
+  if (speechWebAPI) {
+    if (speechRecognition) {
+      
+      isListening.value = true;
+      transcriptText.value = '';
+      userInput.value = '';
+      speechRecognition.start();
+      startVoiceVisualization();
+    } 
+
+  } else {
+    
     isListening.value = true;
     transcriptText.value = '';
     userInput.value = '';
-    speechRecognition.start();
+    customSpeechManager?.startRecognition();
     startVoiceVisualization();
   }
+
+  
+  
 };
 
 const stopSpeechRecognition = () => {
-  if (speechRecognition) {
-    console.log('stopSpeechRecognition');
-    speechRecognition.stop();
+  console.log('stopSpeechRecognition');
+  if (speechWebAPI) {
+    if (speechRecognition) {
+      
+      speechRecognition.stop();
+      isListening.value = false;
+      stopVoiceVisualization();
+    }
+  } else {
+    
+    customSpeechManager?.stopRecognition();
     isListening.value = false;
     stopVoiceVisualization();
   }
@@ -959,8 +1032,6 @@ const startVoiceVisualization = () => {
       console.warn('Voice wave canvas not yet available');
       return;
     }
-
-    console.log('startVoiceVisualization');
     
     // Close any existing audio context to prevent multiple contexts
     /* if (audioContext) {
@@ -1029,184 +1100,6 @@ const startVoiceVisualization = () => {
             x += barWidth + 1;
           }
         } 
-        /* function draw() {
-          if (!isListening.value || !canvasCtx || !speechRecognitionAnalyser) {
-            if (!canvasCtx) return;
-            // Clear the canvas when not listening
-            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-            return;
-          }
-        
-          requestAnimationFrame(draw);
-        
-          speechRecognitionAnalyser.getByteFrequencyData(dataArray);
-        
-          // Clear canvas
-          canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-        
-          // Set up the center line
-          const centerY = canvas.height / 2;
-          
-          // Create a smooth, wavy visualization
-          canvasCtx.beginPath();
-          
-          const barWidth = canvas.width / dataArray.length;
-          
-          for (let i = 0; i < dataArray.length; i++) {
-            // Normalize the amplitude 
-            const amplitude = (dataArray[i] / 128.0) * (canvas.height / 4);
-            
-            // Create a smooth curve that oscillates around the center line
-            const x = i * barWidth;
-            const y = centerY + amplitude * Math.sin(i * 0.2);
-        
-            // Draw the line
-            if (i === 0) {
-              canvasCtx.moveTo(x, y);
-            } else {
-              canvasCtx.lineTo(x, y);
-            }
-          }
-        
-          // Create a gradient for depth
-          const gradient = canvasCtx.createLinearGradient(0, centerY - canvas.height/4, 0, centerY + canvas.height/4);
-          gradient.addColorStop(0, `rgba(50, 150, 255, 0.3)`);
-          gradient.addColorStop(0.5, `rgba(50, 150, 255, 0.7)`);
-          gradient.addColorStop(1, `rgba(50, 50, 255, 0.3)`);
-        
-          // Style the path
-          canvasCtx.strokeStyle = gradient;
-          canvasCtx.lineWidth = 2;
-          canvasCtx.lineCap = 'round';
-          canvasCtx.lineJoin = 'round';
-          
-          // Actually draw the stroke
-          canvasCtx.stroke();
-        } */
-        /* function draw() {
-          if (!isListening.value || !canvasCtx || !speechRecognitionAnalyser) {
-            if (!canvasCtx) return;
-            // Clear the canvas when not listening
-            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-            return;
-          }
-        
-          requestAnimationFrame(draw);
-        
-          speechRecognitionAnalyser.getByteFrequencyData(dataArray);
-        
-          // Clear canvas
-          canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-        
-          // Set up the center line
-          const centerY = canvas.height / 2;
-          
-          const barCount = dataArray.length;
-          const barWidth = canvas.width / barCount;
-        
-          for (let i = 0; i < barCount; i++) {
-            // Normalize the amplitude 
-            const barHeight = (dataArray[i] / 128.0) * (canvas.height / 2);
-            
-            // Calculate x position
-            const x = i * barWidth;
-        
-            // Create a gradient for each bar
-            const gradient = canvasCtx.createLinearGradient(x, centerY, x, centerY - barHeight);
-            gradient.addColorStop(0, `rgba(50, 150, 255, 0.3)`);
-            gradient.addColorStop(0.5, `rgba(50, 150, 255, 0.7)`);
-            gradient.addColorStop(1, `rgba(50, 50, 255, 0.3)`);
-        
-            // Set bar style
-            canvasCtx.fillStyle = gradient;
-        
-            // Draw bar extending from center line upwards
-            canvasCtx.fillRect(
-              x, 
-              centerY, 
-              barWidth - 1, 
-              -barHeight  // Negative to draw upwards from center
-            );
-        
-            // Optional: Mirror the bar below the center line
-            canvasCtx.fillRect(
-              x, 
-              centerY, 
-              barWidth - 1, 
-              barHeight  // Positive to draw downwards from center
-            );
-          }
-        } */
-        /* function draw() {
-          if (!isListening.value || !canvasCtx || !speechRecognitionAnalyser) {
-            if (!canvasCtx) return;
-            // Clear the canvas when not listening
-            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-            return;
-          }
-        
-          requestAnimationFrame(draw);
-        
-          speechRecognitionAnalyser.getByteFrequencyData(dataArray);
-        
-          // Clear canvas
-          canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-        
-          // Set up the center line
-          const centerY = canvas.height / 2;
-          
-          const barCount = 7;
-          const barWidth = canvas.width / (barCount * 3); // Reduce bar width to accommodate spacing
-          const spacing = barWidth * 2; // Space between bars is twice the bar width
-        
-          // Find the maximum frequency value to use for the center bar
-          const centerIndex = Math.floor(dataArray.length / 2);
-          const centerBarHeight = (dataArray[centerIndex] / 128.0) * (canvas.height / 2);
-        
-          for (let i = 0; i < barCount; i++) {
-            // Calculate bar height with a bias towards the center
-            const middleBar = Math.floor(barCount / 2);
-            let barHeight;
-        
-            if (i === middleBar) {
-              // Use the center of the frequency data for the middle bar
-              barHeight = centerBarHeight;
-            } else {
-              // For other bars, sample frequencies symmetrically around the center
-              const offset = i - middleBar;
-              const dataIndex = centerIndex + offset * Math.floor(dataArray.length / (barCount * 2));
-              barHeight = (dataArray[dataIndex] / 128.0) * (canvas.height / 2);
-            }
-            
-            // Calculate x position with spacing
-            const x = i * (barWidth + spacing);
-        
-            // Create a gradient for each bar
-            const gradient = canvasCtx.createLinearGradient(x, centerY, x, centerY - barHeight);
-            gradient.addColorStop(0, `rgba(50, 150, 255, 0.3)`);
-            gradient.addColorStop(0.5, `rgba(50, 150, 255, 0.7)`);
-            gradient.addColorStop(1, `rgba(50, 50, 255, 0.3)`);
-        
-            // Set bar style
-            canvasCtx.fillStyle = gradient;
-        
-            // Draw bar extending from center line upwards
-            canvasCtx.fillRect(
-              x, 
-              centerY, 
-              barWidth, 
-              -barHeight  // Negative to draw upwards from center
-            );
-        
-            // Mirror the bar below the center line
-            canvasCtx.fillRect(
-              x, 
-              centerY, 
-              barWidth, 
-              barHeight  // Positive to draw downwards from center
-            );
-          }
-        } */
         console.log('Visualizing voice');
         // Start drawing
         draw();
