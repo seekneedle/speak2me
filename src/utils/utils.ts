@@ -130,3 +130,119 @@ export function chineseSimilarity(s1: string, s2: string): number {
   // Return a similarity score between 0 and 1
   return 1 - (distance / maxLength);
 }
+
+// Utility function to split text into sentences
+export function splitIntoSentences(text: string): string[] {
+  // Chinese and English sentence delimiters
+  const delimiters = ['。', '！', '？', '!', '?', '.', ';', '；'];
+  
+  let sentences: string[] = [];
+  let currentSentence = '';
+
+  for (let char of text) {
+    currentSentence += char;
+    if (delimiters.includes(char)) {
+      sentences.push(currentSentence.trim());
+      currentSentence = '';
+    }
+  }
+
+  // Add any remaining text
+  if (currentSentence.trim()) {
+    // Check if the remaining text already ends with a delimiter
+    const hasDelimiter = delimiters.some(delimiter => currentSentence.trim().endsWith(delimiter));
+    
+    // If no delimiter, append a default Chinese period
+    sentences.push(hasDelimiter 
+      ? currentSentence.trim() 
+      : `${currentSentence.trim()}。`
+    );
+  }
+
+  return sentences;
+}
+
+export class SentenceBuffer {
+  private buffer: string = '';
+  private delimiters = ['。', '！', '？', '!', '?', '.', ';', '；'];
+
+  addChunk(chunk: string): string[] {
+    this.buffer += chunk;
+    return this.extractCompleteSentences();
+  }
+
+  private extractCompleteSentences(): string[] {
+    const sentences: string[] = [];
+    
+    while (true) {
+      // Find the index of the first delimiter
+      const delimiterIndex = this.delimiters.reduce((minIndex, delimiter) => {
+        const index = this.buffer.indexOf(delimiter);
+        return (index !== -1 && index < minIndex) ? index : minIndex;
+      }, this.buffer.length);
+
+      // If no delimiter found, break
+      if (delimiterIndex === this.buffer.length) break;
+
+      // Extract the complete sentence (including the delimiter)
+      const sentence = this.buffer.slice(0, delimiterIndex + 1).trim();
+      sentences.push(sentence);
+
+      // Remove the processed sentence from the buffer
+      this.buffer = this.buffer.slice(delimiterIndex + 1).trimStart();
+    }
+
+    return sentences;
+  }
+
+  getRemainingBuffer(): string {
+    return this.buffer;
+  }
+}
+
+export class DisplayQueue {
+  private queue: string[] = [];
+  private isProcessing = false;
+
+  async enqueue(sentence: string, onChunk: (chunk: string) => void): Promise<void> {
+    this.queue.push(sentence);
+    
+    if (!this.isProcessing) {
+      this.isProcessing = true;
+      await this.processQueue(onChunk);
+    }
+  }
+
+  private async processQueue(onChunk: (chunk: string) => void): Promise<void> {
+    while (this.queue.length > 0) {
+      const sentence = this.queue.shift();
+      if (sentence) {
+        await this.displaySentence(sentence, onChunk);
+      }
+    }
+    this.isProcessing = false;
+  }
+
+  private async displaySentence(sentence: string, onChunk: (chunk: string) => void): Promise<void> {
+    return new Promise((resolve) => {
+      
+      let index = 0;
+
+      const displayNextChar = () => {
+        if (index < sentence.length) {
+          
+          onChunk(sentence[index]);
+          index++;
+
+          // Adjust timing based on character type (slower for Chinese, faster for English)
+          const delay = /[\u4e00-\u9fff]/.test(sentence[index - 1]) ? 100 : 50;
+          setTimeout(displayNextChar, delay);
+        } else {
+          resolve();
+        }
+      };
+
+      displayNextChar();
+    });
+  }
+}

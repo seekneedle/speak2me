@@ -12,6 +12,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@nlpjs/basic": "^4.27.0",
     "@nlpjs/core": "^4.26.1",
     "@nlpjs/lang-zh": "^4.26.1",

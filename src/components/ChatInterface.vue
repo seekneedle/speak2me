@@ -727,8 +727,10 @@ const sendMessage = async () => {
   }
 
   try {
-    await getResponse(userInput.value);
+    const input = userInput.value
     userInput.value = '';
+    await getResponse(input);
+    
     await scrollToBottom();
   } catch (err) {
     console.error('Error sending message:', err);
@@ -816,7 +818,7 @@ let speechRecognition: SpeechRecognition | null = null;
 let customSpeechManager: SpeechRecognitionManager | null = null;
 //let audioContext: AudioContext | null = null;
 let speechRecognitionAnalyser: AnalyserNode | null = null;
-let speechWebAPI = false;
+let speechWebAPI = true;
 let speechTimeout: number | null = null;
 
 const initializeSpeechRecognition = () => {

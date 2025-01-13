@@ -107,7 +107,7 @@ export class AudioQueueManager {
     private tryProcessQueue() {
         // Keep track of processed sequences to detect potential stalls
         const processedSequences: number[] = [];
-        console.log('tryProcessQueue');
+        //console.log('tryProcessQueue');
         //this.diagnoseAudioContext();
 
         while (this.pendingBuffers.has(this.nextToPlay)) {
@@ -145,7 +145,7 @@ export class AudioQueueManager {
     private playNext() {
         console.log('playNext');
         if (this.isPlaying || this.queue.length === 0) {
-            console.log('Queue is empty or already playing');
+            //console.log('Queue is empty or already playing');
             //this.diagnoseAudioContext();
             return;
         }
@@ -188,11 +188,11 @@ export class AudioQueueManager {
                 console.log('AudioContext successfully resumed for playing');
                 source.start(0)
             });
-            console.log('after resume attempt');
+            //console.log('after resume attempt');
             //this.diagnoseAudioContext();
         } else {
             source.start(0);
-            console.log('audioContext is not suspended');
+            //console.log('audioContext is not suspended');
             //this.diagnoseAudioContext();
         }
     }

@@ -1,10 +1,14 @@
 import { ref } from 'vue';
 import axios, { AxiosProgressEvent } from 'axios';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 //import { generateSpeech } from './Text2Speech';
 //import { AudioQueueManager } from './AudioQueueManager';
 import { AudioProcessingManager } from './AudioProcessingManager';
 import { extractJsonObjects } from '../utils/utils';
 import {isMobileDevice} from '../utils/utils';
+import { splitIntoSentences } from '@/utils/utils'
+import { SentenceBuffer } from '@/utils/utils';
+import { DisplayQueue } from '@/utils/utils';
 import { config } from '../config/config';
 //import { containerBootstrap } from '@nlpjs/core';
 //import { Nlp } from '@nlpjs/nlp';
@@ -12,7 +16,7 @@ import { config } from '../config/config';
 
 //const requestMutex = new Mutex();
 const STREAM_QUERY_URL = `${config.api.baseUrl}/vector_store/stream_query`;
-//const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
+const QUERY_URL = `${config.api.baseUrl}/vector_store/query`;
 //const SENTENCE_DELIMITERS = ['。', '！', '？', '!', '?'] as const;
 //let authToken = ref<string | null>(null);
 let seenBytes = 0;
@@ -36,16 +40,46 @@ const systemTemplate = '# 角色:你的交流风格简练而专业。\
 
 const audioProcessor = AudioProcessingManager.getInstance();
 
-/* async function makeNormalQueryRequest(question: string): Promise<string> {
+// Smooth character-by-character display
+async function displayCharactersBySmoothing(
+  sentence: string, 
+  onChunk: (chunk: string) => void
+): Promise<void> {
+  return new Promise((resolve) => {
+    //let displayedText = '';
+    let index = 0;
+
+    const displayNextChar = () => {
+      if (index < sentence.length) {
+        //displayedText += sentence[index];
+        onChunk(sentence[index]);
+        index++;
+
+        // Adjust timing based on character type (slower for Chinese, faster for English)
+        const delay = /[\u4e00-\u9fff]/.test(sentence[index - 1]) ? 100 : 50;
+        setTimeout(displayNextChar, delay);
+      } else {
+        resolve();
+      }
+    };
+
+    displayNextChar();
+  });
+}
+
+async function makeNormalQueryRequest(question: string, 
+                                      onChunk: (chunk: string) => void, 
+                                      onStart?: () => void, 
+                                      onComplete?: () => void): Promise<string> {
   const requestBody = {
-    id: "wtu9xf10cd", // knowledge base id
+    id: config.bailian.indexId, // knowledge base id
     messages: [
       {
         "role": "user", 
         "content": question
       }
     ],
-    system: "", // optional system prompt
+    system: systemTemplate,//'You are a helpful assistant.',
     top_k: 20,  // adjust these values as needed
     rerank_top_k: 5,
   };
@@ -57,11 +91,26 @@ const audioProcessor = AudioProcessingManager.getInstance();
       'Access-Control-Allow-Origin': '*'
     }
   };
-
+  
   try {
     const response = await axios.post(QUERY_URL, requestBody, axiosConfig);
     if (response.data.code == 200) {
-      return response.data.data.content;
+      const fullContent = response.data.data.content;
+      
+      // Split content into sentences
+      const sentences = splitIntoSentences(fullContent);
+      onStart?.();
+      // Process sentences sequentially
+      for (const sentence of sentences) {
+        // Display characters smoothly
+        displayCharactersBySmoothing(sentence, onChunk);
+        
+        // Speak the sentence
+        await audioProcessor.processAudioChunk(sentence);
+      }
+
+      onComplete?.();
+      return fullContent;
     } else {
       return response.data.error;
     }
@@ -69,7 +118,7 @@ const audioProcessor = AudioProcessingManager.getInstance();
     console.error('Normal query request error:', error);
     throw error;
   }
-} */
+} 
 
 async function makeStreamQueryRequest(question: string, 
                                       onChunk: (chunk: string) => void, 
@@ -104,7 +153,7 @@ async function makeStreamQueryRequest(question: string,
   //  }
 
   // Create a promise to track full content retrieval
-  const contentCompletionPromise = new Promise<void>((resolve) => {
+  //const contentCompletionPromise = new Promise<void>((resolve) => {
     const axiosConfig = {
       headers: {
         'Authorization': `Basic ${btoa(`${config.auth.username}:${config.auth.password}`)}`,
@@ -114,7 +163,11 @@ async function makeStreamQueryRequest(question: string,
       responseType: 'stream' as const,
       onDownloadProgress: 
         async (progressEvent: AxiosProgressEvent) => {
-        
+          if (progressEvent.total != null) {
+            console.log(Math.round(progressEvent.loaded / progressEvent.total * 100) + '%');
+          }
+          
+          
           //return requestMutex.runExclusive(
             //async () => {
             //console.log('Mutex exclusive block started at:', new Date().toISOString());
@@ -123,7 +176,7 @@ async function makeStreamQueryRequest(question: string,
     
               const responseText = target.responseText.slice(seenBytes || 0);
               seenBytes = target.responseText.length;
-              //console.log('responseText: ', responseText);
+              console.log('responseText: ', responseText);
               if (responseText) {
                 const jsonObjects = extractJsonObjects(responseText);
     
@@ -132,8 +185,8 @@ async function makeStreamQueryRequest(question: string,
                   .filter((content: string) => content.trim() !== '');
     
                 const chunksArray = chunks.flatMap((chunk) => chunk.split('\n').filter(Boolean));
-                console.log('getting response at: ', new Date().toISOString());
-                onStart?.();
+                //console.log('getting response at: ', new Date().toISOString());
+                //onStart?.();
     
                 for (const chunk of chunksArray) {
                   try {
@@ -162,7 +215,7 @@ async function makeStreamQueryRequest(question: string,
                 // Check if all content has been retrieved
                 if (target.readyState === 4 && target.status === 200 && !isInterrupted) {
                   console.log('All content retrieved at:', new Date().toISOString());
-                  onComplete?.();
+                  //onComplete?.();
                 }
               }
             }
@@ -175,17 +228,19 @@ async function makeStreamQueryRequest(question: string,
 
     try {
       seenBytes = 0;
+      onStart?.();
       axios.post(STREAM_QUERY_URL, requestBody, axiosConfig);
       
     } catch (error) {
       console.error('Stream query request error:', error);
-      resolve();
+      //resolve();
     } finally {
-      resolve();
+      
+      //resolve();
     } 
-  }); 
+  //}); 
 
-  try {
+  /* try {
     // Wait for full content retrieval
     await contentCompletionPromise;
     console.log('contentCompletionPromise resolved at:', new Date().toISOString());
@@ -197,7 +252,111 @@ async function makeStreamQueryRequest(question: string,
     console.log('Stream query request completed at:', new Date().toISOString());
     
     return Promise.resolve();
-  }
+  } */
+} 
+
+async function makeSseRequest(
+  question: string, 
+  onChunk: (chunk: string) => void, 
+  onStart: () => void = () => {}, 
+  onComplete: () => void = () => {}
+): Promise<void> {
+  // Prepare the request body
+  const requestBody = {
+    id: config.bailian.indexId,
+    messages: [
+      {
+        "role": "user", 
+        "content": question
+      }
+    ],
+    system: systemTemplate,
+    top_k: 20,
+    rerank_top_k: 5,
+  };
+
+  // Prepare authorization headers
+  const authHeader = `Basic ${btoa(`${config.auth.username}:${config.auth.password}`)}`;
+
+  // Track whether the first message has been received
+  let firstMessageReceived = false;
+
+  return new Promise(async (resolve, reject) => {
+    const sentenceBuffer = new SentenceBuffer();
+    const displayQueue = new DisplayQueue();
+    audioProcessor.setGlobalOnCompleteCallback(onComplete);
+    const url = new URL(STREAM_QUERY_URL, window.location.origin);
+    //url.searchParams.append('question', question);
+
+    // Create a fetch request to initiate the SSE connection with proper headers
+    await fetchEventSource(url.toString(), {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify(requestBody),
+      
+      async onopen(response) {
+          if (response.ok) {
+              console.log("SSE connection opened"); // everything's good
+              //onStart?.();
+          } else {
+              console.error("Error opening SSE connection:", response);
+          }
+      },
+      async onmessage(msg) {
+          // if the server emits an error message, throw an exception
+          // so it gets handled by the onerror callback below:
+          if (msg.event === 'FatalError') {
+              throw new Error(msg.data);
+          }
+          // Add a flag to track first message
+          if (!firstMessageReceived) {
+            onStart();
+            firstMessageReceived = true;
+          }
+          const data = JSON.parse(msg.data);
+          console.log('Received chunk:', data.data.content);
+          if (data.code === 200) {
+            // Add chunk to buffer and extract complete sentences
+            const completeSentences = sentenceBuffer.addChunk(data.data.content);
+
+            // Process each complete sentence
+            for (const sentence of completeSentences) {
+              // Display characters smoothly
+              displayQueue.enqueue(sentence, onChunk);
+              
+              // Process audio in parallel without awaiting
+              await audioProcessor.processAudioChunk(sentence);
+            }
+          }
+          
+      },
+      onclose() {
+          // Process any remaining buffer content
+          const remainingContent = sentenceBuffer.getRemainingBuffer();
+          if (remainingContent.trim()) {
+            // If there's any remaining content, process it as a final sentence
+            displayQueue.enqueue(remainingContent + '。', onChunk);
+            audioProcessor.processAudioChunk(remainingContent);
+          }
+          console.log("Connection closed");
+          //onComplete?.();
+      },
+      onerror(err) {
+          if (err instanceof Error) {
+              throw err; // rethrow to stop the operation
+          } else {
+              // do nothing to automatically retry. You can also
+              // return a specific retry interval here.
+          }
+      }
+      
+    });
+  });
 }
 
 import { NlpManagerWrapper } from './NlpInterface'
@@ -267,10 +426,10 @@ export function useRAGSystem() {
       role: 'assistant', 
       content: '思考中...' 
     }) - 1;
-    console.log('start makeStreamQueryRequest at:', new Date().toISOString());
+    console.log('start request at:', new Date().toISOString());
     isLoading.value = true;
     try {
-      await makeStreamQueryRequest(
+      await makeSseRequest(
         question, 
         (chunk) => {
           // Update the assistant's message content with streaming chunks
@@ -298,7 +457,7 @@ export function useRAGSystem() {
       
       messages.value[assistantMessageIndex].content = `Error: ${errorMessage}`;
     } finally {
-      console.log('makeStreamQueryRequest completed at:', new Date().toISOString());
+      console.log('request completed at:', new Date().toISOString());
       //isLoading.value = false;
     }
   }
