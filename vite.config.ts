@@ -10,6 +10,7 @@ export default defineConfig({
     filename: './dist/stats.html',
     open: true
   })],
+
   base: '/',
   resolve: {
     alias: {
@@ -30,6 +31,9 @@ export default defineConfig({
     //   }
     // },
     rollupOptions: {
+      external: [
+        '@nlpjs/lang-zh'
+      ],
       output: {
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name.split('.')

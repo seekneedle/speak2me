@@ -6,7 +6,10 @@ export async function createNlp(): Promise<Nlp> {
     (container as any).use(Nlp);
     
     // Lazy load the LangZh package
-    const { LangZh } = await import('@nlpjs/lang-zh');
+    //const { LangZh } = await import('@nlpjs/lang-zh');
+
+    const { LangZh } = await import('https://cdn.jsdelivr.net/npm/@nlpjs/lang-zh@4.26.1/dist/lang-zh.min.js');
+    
     (container as any).use(LangZh);
     
     const nlp = container.get('nlp');

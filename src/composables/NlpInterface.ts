@@ -71,43 +71,19 @@ export async function createNlpManager(isMobile: boolean = false): Promise<NlpMa
   if (isMobile) {
     const simplifiedNlp = new SimplifiedNlpManager()
     await simplifiedNlp.initialize()
+    console.log('Creating SimplifiedNlpManager...')
     return new NlpManagerWrapper(simplifiedNlp)
   }
 
-/*   // Original nlp.js initialization
-  const container = await containerBootstrap();
-  (container as any).use(Nlp);
-  
-  const { LangZh } = await import('@nlpjs/lang-zh');
-  (container as any).use(LangZh);
-  
-  const nlp = container.get('nlp');
-  nlp.addLanguage('zh');
-
-  // Add documents (same as your original code)
-  const noUtterances = [
-    '不', '不用', '不需要', 
-    '否', '不想', '没有了',
-    '停', '停止', '算了'
-  ];
-
-  noUtterances.forEach(utterance => {
-    nlp.addDocument('zh', utterance, 'intent.no');
-  });
-
-  const yesUtterances = [
-    '是', '当然', '好的', '有的',
-    '没问题', '继续', '好', '是的',
-    '是的', '可以', '肯定', '有'
-  ];
-
-  yesUtterances.forEach(utterance => {
-    nlp.addDocument('zh', utterance, 'intent.yes');
-  });
-
-  await nlp.train();
- */
-  return new NlpManagerWrapper(await createNlp());
+  try {
+    console.log('Attempting to create AxaNLP manager...')
+    return new NlpManagerWrapper(await createNlp())
+  } catch (error) {
+    console.warn('Failed to create AxaNLP manager, falling back to SimplifiedNlpManager:', error)
+    const simplifiedNlp = new SimplifiedNlpManager()
+    await simplifiedNlp.initialize()
+    return new NlpManagerWrapper(simplifiedNlp)
+  }
 }
 
 // Modify your existing initialization function
