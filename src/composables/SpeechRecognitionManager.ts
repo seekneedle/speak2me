@@ -153,7 +153,7 @@ export class SpeechRecognitionManager {
 
     
         if (!mimeType) {
-            throw new Error('No supported audio recording format found');
+            console.error('No supported audio recording format found');
         }
         // Reset previous state
         this.audioChunks = [];
