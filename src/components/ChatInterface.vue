@@ -818,7 +818,7 @@ let speechRecognition: SpeechRecognition | null = null;
 let customSpeechManager: SpeechRecognitionManager | null = null;
 //let audioContext: AudioContext | null = null;
 let speechRecognitionAnalyser: AnalyserNode | null = null;
-let speechWebAPI = true;
+let speechWebAPI = false;
 let speechTimeout: number | null = null;
 
 const initializeSpeechRecognition = () => {
@@ -830,6 +830,7 @@ const initializeSpeechRecognition = () => {
     (window as any).msSpeechRecognition;
   
   if (!SpeechRecognition) {
+    speechWebAPI = false;
     console.error('Speech recognition is not supported in this browser.');
     alert('Your browser does not support speech recognition. Please try Chrome or Edge.');
     return null;
@@ -883,6 +884,7 @@ const initializeSpeechRecognition = () => {
     };
 
     recognition.onerror = (event: any) => {
+      speechWebAPI = false;
       console.error('Speech recognition error:', event.error);
       
       // More detailed error handling
@@ -919,6 +921,7 @@ const initializeSpeechRecognition = () => {
 
     return recognition;
   } catch (error) {
+    speechWebAPI = false;
     console.error('Failed to initialize speech recognition:', error);
     alert('Failed to initialize speech recognition. Please try a different browser.');
     return null;
@@ -927,15 +930,10 @@ const initializeSpeechRecognition = () => {
 
 const toggleSpeechRecognition = () => {
   resumeAudioContext();
+
   if (speechWebAPI) {
     if (!speechRecognition) {
       speechRecognition = initializeSpeechRecognition();
-    }
-
-    if (!isListening.value) {
-      startSpeechRecognition();
-    } else {
-      stopSpeechRecognition();
     }
   } else {
     customSpeechManager = SpeechRecognitionManager.getInstance()
@@ -976,11 +974,12 @@ const toggleSpeechRecognition = () => {
         //alert('Speech recognition error: ' + error);
         isListening.value = false;
       });
-    if (!isListening.value) {
+  }
+
+  if (!isListening.value) {
       startSpeechRecognition();
-    } else {
+  } else {
       stopSpeechRecognition();
-    }  
   }
 
 };
@@ -1093,8 +1092,15 @@ const startVoiceVisualization = () => {
 
             // Create a gradient effect
             const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
-            gradient.addColorStop(0, `rgba(50, 150, 255, 0.7)`);
-            gradient.addColorStop(1, `rgba(50, 50, 255, 0.3)`);
+            if (speechWebAPI) {
+              // Blue gradient when WebAPI is available
+              gradient.addColorStop(0, `rgba(50, 150, 255, 0.7)`);
+              gradient.addColorStop(1, `rgba(50, 50, 255, 0.3)`);
+            } else {
+              // Red/orange gradient when WebAPI is not available
+              gradient.addColorStop(0, `rgba(255, 100, 50, 0.7)`);
+              gradient.addColorStop(1, `rgba(255, 50, 50, 0.3)`);
+            }
 
             canvasCtx.fillStyle = gradient;
             canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
