@@ -333,6 +333,9 @@ const toggleAudioPlayback = () => {
 // Event handlers
 const onAudioLoadStart = () => {
   console.log('Audio loading started at: ' + new Date().toISOString());
+  if (isWeChat()) { //on iOS device, wechat browser will not trigger MeatdataLoaded and canplay events
+    isAudioElementLoaded.value = true
+  }
 }
 
 const onAudioMetadataLoaded = () => {
@@ -810,6 +813,7 @@ const scrollToBottom = async () => {
 };
 
 import { SpeechRecognitionManager } from '@/composables/SpeechRecognitionManager';
+import { isWeChat } from '@/utils/utils';
 // Speech Recognition Setup
 const isListening = ref(false);
 const transcriptText = ref('');
