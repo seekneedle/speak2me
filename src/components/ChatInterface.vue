@@ -333,7 +333,7 @@ const toggleAudioPlayback = () => {
 // Event handlers
 const onAudioLoadStart = () => {
   console.log('Audio loading started at: ' + new Date().toISOString());
-  if (isWeChat()) { //on iOS device, wechat browser will not trigger MeatdataLoaded and canplay events
+  if (isWeChat() && isIOSDevice()) { //on iOS device, wechat browser will not trigger MeatdataLoaded and canplay events
     isAudioElementLoaded.value = true
   }
 }
@@ -813,7 +813,7 @@ const scrollToBottom = async () => {
 };
 
 import { SpeechRecognitionManager } from '@/composables/SpeechRecognitionManager';
-import { isWeChat } from '@/utils/utils';
+import { isIOSDevice, isWeChat } from '@/utils/utils';
 // Speech Recognition Setup
 const isListening = ref(false);
 const transcriptText = ref('');
@@ -1133,6 +1133,10 @@ const stopVoiceVisualization = () => {
 
 // Lifecycle hooks
 onMounted(() => {
+  if (isWeChat() && isIOSDevice()) { //on iOS device, wechat browser will not trigger MeatdataLoaded and canplay events
+    isAudioElementLoaded.value = true
+    console.log('Wechat on IOSDevice')
+  }
   //isAudioElementLoaded.value = true;
   //setupAudioPlayback();
   //init3DRotatingCircle();

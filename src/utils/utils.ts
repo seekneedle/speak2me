@@ -93,12 +93,15 @@ export const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 }
 
+export const isIOSDevice = () => {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+}
+
 export function isWeChat(){
   
   var ua = window.navigator.userAgent.toLowerCase();
   //通过正则表达式匹配ua中是否含有MicroMessenger字符串
   if (ua.match(/MicroMessenger/i)?.toString().toLocaleLowerCase() === 'micromessenger'){
-    console.log("微信浏览器");
     return true;
   } else {
     return false;
