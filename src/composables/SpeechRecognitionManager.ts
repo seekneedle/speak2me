@@ -19,7 +19,7 @@ export class SpeechRecognitionManager {
   private recognitionResult: Ref<RecognitionResult | null> = ref(null);
   private error: Ref<string | null> = ref(null);
   private silenceTimer: number | null = null;
-  private readonly SILENCE_THRESHOLD_MS = 1000; // 1000ms of silence
+  private readonly SILENCE_THRESHOLD_MS = 500; // 1000ms of silence
   private readonly AUDIO_THRESHOLD = 0.10; // Adjust this value (percentage of the volume) to control sensitivity
   private static instance: SpeechRecognitionManager;
 

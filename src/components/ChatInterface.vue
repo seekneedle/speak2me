@@ -820,6 +820,7 @@ const transcriptText = ref('');
 const voiceWaveCanvas = ref<HTMLCanvasElement | null>(null);
 let speechRecognition: SpeechRecognition | null = null;
 let customSpeechManager: SpeechRecognitionManager | null = null;
+const SILENCE_THRESHOLD_MS = 2000;
 //let audioContext: AudioContext | null = null;
 let speechRecognitionAnalyser: AnalyserNode | null = null;
 let speechWebAPI = false;
@@ -884,7 +885,7 @@ const initializeSpeechRecognition = () => {
       speechTimeout = setTimeout(() => {
         console.log('Speech timeout triggered');
         stopSpeechRecognition();
-      }, 2000) as unknown as number;
+      }, SILENCE_THRESHOLD_MS) as unknown as number;
     };
 
     recognition.onerror = (event: any) => {
@@ -971,7 +972,7 @@ const toggleSpeechRecognition = () => {
         speechTimeout = setTimeout(() => {
           console.log('Speech timeout triggered');
           stopSpeechRecognition();
-        }, 2000) as unknown as number;
+        }, SILENCE_THRESHOLD_MS) as unknown as number;
       })
       .onError((error: string) => {
         console.error('Speech recognition error:', error);
