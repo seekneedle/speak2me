@@ -57,7 +57,7 @@ export class SpeechRecognitionManager {
     if (this.audioChunks.length > 0) {
       try {
         console.log('Submitting audio with chunk counts:', this.audioChunks.length);
-        console.log('Audio Chunks Types:', this.audioChunks.map(chunk => chunk.type));
+        //console.log('Audio Chunks Types:', this.audioChunks.map(chunk => chunk.type));
         // Validate and filter chunks
         const validChunks = this.audioChunks.filter(chunk => 
             chunk.size > 0 && chunk.type === 'audio/webm;codecs=opus'
@@ -65,7 +65,7 @@ export class SpeechRecognitionManager {
 
         if (validChunks.length === 0) {
             console.warn('No valid audio chunks to process');
-            this.audioChunks = [];
+            //this.audioChunks = [];
             return;
         }
 
@@ -79,12 +79,13 @@ export class SpeechRecognitionManager {
         if (audioBlob.size > 0) {
             console.log(`Uploading audio at ${new Date().toISOString()}`);
             const taskId = await this.uploadAudio(audioBlob);
-            
-            console.log(`start polling at ${new Date().toISOString()}`);
+            console.log(`get returned task: ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
+
+            console.log(`start polling task ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
             // Process the recognition result
             const result = await this.pollRecognitionResult(taskId);
             
-            console.log(`Received result at ${new Date().toISOString()}`);
+            console.log(`Received result of task ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
             // Trigger result callback
             this.onResultCallback?.(result?.text || '');
         } else {
@@ -96,7 +97,7 @@ export class SpeechRecognitionManager {
       } catch (error) {
         console.error('Error processing audio chunk:', error);
         this.onErrorCallback?.(String(error));
-        this.audioChunks = []; // Clear chunks to prevent repeated errors
+        //this.audioChunks = []; // Clear chunks to prevent repeated errors
       }
     }
   }
@@ -282,7 +283,7 @@ export class SpeechRecognitionManager {
         const response = await axios.get(`${query_api_url}/${taskId}`);
         console.log('Recognition response:', response);
         if (response.data.resp.message === 'Success') {
-          console.log('Recognition result:', response.data.resp.text);
+          console.log(`Recognition of task (${taskId.split('-').pop()}) result: ${response.data.resp.text}`);
           return {
             text: response.data.resp.text,
             confidence: 1
@@ -292,12 +293,12 @@ export class SpeechRecognitionManager {
         // Wait before next attempt
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
-        console.error('Recognition query failed:', error);
-        throw new Error('Recognition query failed');
+        console.error(`Recognition query of task (${taskId.split('-').pop()}) failed: ${error}`);
+        throw new Error(`Recognition query of task (${taskId.split('-').pop()}) failed: ${error}`);
       }
     }
 
-    throw new Error('Recognition timed out');
+    throw new Error(`Recognition query of task (${taskId.split('-').pop()}) timed out`);
   }
 
   // Cancel ongoing recording

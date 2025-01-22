@@ -823,10 +823,10 @@ let customSpeechManager: SpeechRecognitionManager | null = null;
 const SILENCE_THRESHOLD_MS = 2000;
 //let audioContext: AudioContext | null = null;
 let speechRecognitionAnalyser: AnalyserNode | null = null;
-let speechWebAPI = false;
+let useSpeechWebAPI = false;
 let speechTimeout: number | null = null;
 
-const initializeSpeechRecognition = () => {
+const initializeWebAPISpeechRecognition = () => {
   // Check browser support with multiple prefixes
   const SpeechRecognition = 
     window.SpeechRecognition || 
@@ -835,7 +835,7 @@ const initializeSpeechRecognition = () => {
     (window as any).msSpeechRecognition;
   
   if (!SpeechRecognition) {
-    speechWebAPI = false;
+    useSpeechWebAPI = false;
     console.error('Speech recognition is not supported in this browser.');
     alert('Your browser does not support speech recognition. Please try Chrome or Edge.');
     return null;
@@ -889,7 +889,7 @@ const initializeSpeechRecognition = () => {
     };
 
     recognition.onerror = (event: any) => {
-      speechWebAPI = false;
+      useSpeechWebAPI = false;
       console.error('Speech recognition error:', event.error);
       
       // More detailed error handling
@@ -926,22 +926,16 @@ const initializeSpeechRecognition = () => {
 
     return recognition;
   } catch (error) {
-    speechWebAPI = false;
-    console.error('Failed to initialize speech recognition:', error);
-    alert('Failed to initialize speech recognition. Please try a different browser.');
+    useSpeechWebAPI = false;
+    console.error('Failed to initialize web API speech recognition:', error);
+    alert('Failed to initialize Web API speech recognition. Please try a different browser.');
     return null;
   }
 };
 
-const toggleSpeechRecognition = () => {
-  resumeAudioContext();
-
-  if (speechWebAPI) {
-    if (!speechRecognition) {
-      speechRecognition = initializeSpeechRecognition();
-    }
-  } else {
-    customSpeechManager = SpeechRecognitionManager.getInstance()
+const initializeCustomSpeechRecognition = () => {
+  try {
+    const recognition = SpeechRecognitionManager.getInstance()
       .onStart(() => {
         console.log('Speech recognition started');
         isListening.value = true;
@@ -977,8 +971,34 @@ const toggleSpeechRecognition = () => {
       .onError((error: string) => {
         console.error('Speech recognition error:', error);
         //alert('Speech recognition error: ' + error);
-        isListening.value = false;
+
+        /* 
+           Nicely handle error since the custom speech recogintion's backend may 
+           return error from time to time. 
+           We keep the model window visible (not setting isLisening to false) to allow
+           user continue speaking. 
+        */
+        //isListening.value = false;
       });
+      return recognition;
+  } catch (error) {
+    console.error('Failed to initialize custom speech recognition:', error);
+    return null;
+  }
+  
+}
+
+const toggleSpeechRecognition = () => {
+  resumeAudioContext();
+
+  if (useSpeechWebAPI) {
+    if (!speechRecognition) {
+      speechRecognition = initializeWebAPISpeechRecognition();
+    }
+  } else {
+    if (!customSpeechManager) {
+      customSpeechManager = initializeCustomSpeechRecognition();
+    }
   }
 
   if (!isListening.value) {
@@ -991,44 +1011,29 @@ const toggleSpeechRecognition = () => {
 
 const startSpeechRecognition = () => {
   console.log('startSpeechRecognition');
-  if (speechWebAPI) {
-    if (speechRecognition) {
-      
-      isListening.value = true;
-      transcriptText.value = '';
-      userInput.value = '';
-      speechRecognition.start();
-      startVoiceVisualization();
-    } 
+  isListening.value = true;
+  transcriptText.value = '';
+  userInput.value = '';
 
+  if (useSpeechWebAPI) {
+    speechRecognition?.start();
   } else {
-    
-    isListening.value = true;
-    transcriptText.value = '';
-    userInput.value = '';
     customSpeechManager?.startRecognition();
-    startVoiceVisualization();
   }
 
-  
-  
+  startVoiceVisualization();
 };
 
 const stopSpeechRecognition = () => {
   console.log('stopSpeechRecognition');
-  if (speechWebAPI) {
-    if (speechRecognition) {
-      
-      speechRecognition.stop();
-      isListening.value = false;
-      stopVoiceVisualization();
-    }
-  } else {
-    
+  if (useSpeechWebAPI) {
+      speechRecognition?.stop();
+  } else {  
     customSpeechManager?.stopRecognition();
-    isListening.value = false;
-    stopVoiceVisualization();
   }
+  isListening.value = false;
+  stopVoiceVisualization();
+
 };
 
 const startVoiceVisualization = () => {
@@ -1097,7 +1102,7 @@ const startVoiceVisualization = () => {
 
             // Create a gradient effect
             const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
-            if (speechWebAPI) {
+            if (useSpeechWebAPI) {
               // Blue gradient when WebAPI is available
               gradient.addColorStop(0, `rgba(50, 150, 255, 0.7)`);
               gradient.addColorStop(1, `rgba(50, 50, 255, 0.3)`);
