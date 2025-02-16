@@ -261,3 +261,97 @@ export class DisplayQueue {
     });
   }
 }
+
+
+export function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+      const audioContext = new AudioContext();
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+          try {
+              const arrayBuffer = e.target?.result as ArrayBuffer;
+              const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+              // Convert AudioBuffer to WAV
+              const wavBlob = await audioBufferToWavBlob(audioBuffer);
+
+              resolve(wavBlob);
+          } catch (error) {
+              console.error('Error converting WebM to WAV:', error);
+              reject(error);
+          }
+      };
+
+      reader.onerror = (error) => {
+          console.error('FileReader error:', error);
+          reject(error);
+      };
+
+      reader.readAsArrayBuffer(webmBlob);
+  });
+}
+
+/**
+* Convert AudioBuffer to WAV Blob
+* @param audioBuffer AudioBuffer to convert
+* @returns Promise resolving to WAV Blob
+*/
+async function audioBufferToWavBlob(audioBuffer: AudioBuffer): Promise<Blob> {
+  // Number of channels (1 for mono, 2 for stereo)
+  const numOfChan = audioBuffer.numberOfChannels;
+  // Sample rate
+  const sampleRate = audioBuffer.sampleRate;
+  // Total samples
+  const samples = audioBuffer.length;
+  // Bit depth (16-bit)
+  const bytesPerSample = 2;
+
+  // Create a buffer to hold the WAV file
+  const buffer = new ArrayBuffer(44 + samples * numOfChan * bytesPerSample);
+  const view = new DataView(buffer);
+
+  // Write WAV header
+  // RIFF chunk descriptor
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + samples * numOfChan * bytesPerSample, true);
+  writeString(view, 8, 'WAVE');
+
+  // FMT sub-chunk
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);  // Subchunk1Size
+  view.setUint16(20, 1, true);   // Audio format (1 = PCM)
+  view.setUint16(22, numOfChan, true);  // Number of channels
+  view.setUint32(24, sampleRate, true); // Sample rate
+  view.setUint32(28, sampleRate * numOfChan * bytesPerSample, true); // Byte rate
+  view.setUint16(32, numOfChan * bytesPerSample, true); // Block align
+  view.setUint16(34, bytesPerSample * 8, true); // Bits per sample
+
+  // Data sub-chunk
+  writeString(view, 36, 'data');
+  view.setUint32(40, samples * numOfChan * bytesPerSample, true);
+
+  // Write audio data
+  let offset = 44;
+  for (let i = 0; i < samples; i++) {
+      for (let channel = 0; channel < numOfChan; channel++) {
+          // Get channel data and convert to 16-bit integer
+          const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+          const int16Sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+          
+          // Write 16-bit sample
+          view.setInt16(offset, int16Sample, true);
+          offset += bytesPerSample;
+      }
+  }
+
+  // Create blob
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+// Helper function to write strings to DataView
+function writeString(view: DataView, offset: number, str: string) {
+  for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+  }
+}

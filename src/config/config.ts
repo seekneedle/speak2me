@@ -4,12 +4,12 @@ const API_CONFIG = {
     development: {
         baseUrl: '', // Empty for relative URLs that will be handled by Vite proxy
         ttsBaseUrl: '',//'http://localhost:5100',
-        asrBaseUrl: 'http://localhost:5101'
+        asrBaseUrl: 'ws://localhost:5101/ws'
     },
     production: {
         baseUrl: 'https://kb.uuxlink.com', //'https://8.152.213.191:8471', // Direct backend URL in production
         ttsBaseUrl: 'https://kb.uuxlink.com',//'https://askrag-proxy.wulfgang.workers.dev'//'https://openspeech.bytedance.com'//
-        asrBaseUrl: 'https://kb.uuxlink.com'
+        asrBaseUrl: 'ws://kb.uuxlink.com/ws'
     }
 };
 

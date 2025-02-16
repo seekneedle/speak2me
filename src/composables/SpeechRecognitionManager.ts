@@ -2,6 +2,8 @@ import axios from 'axios';
 import { ref, Ref } from 'vue';
 import { config } from '../config/config';
 import { audioContext} from './UseAudioContext';
+import { convertWebmToWav } from '../utils/utils';
+import { AsrWsClient } from '../composables/AsrWsClient';
 
 const upload_api_url = `${config.api.asrBaseUrl}/api/v1/asr/upload`;
 const query_api_url = `${config.api.asrBaseUrl}/api/v1/asr/query`;
@@ -69,25 +71,47 @@ export class SpeechRecognitionManager {
             return;
         }
 
-        const audioBlob = new Blob(validChunks, { type: 'audio/webm;codecs=opus' });
+        const audioBlob = new Blob(validChunks, { type: 'audio/webm' });
 
-        console.log(`Audio Blob Details:
+        /* console.log(`Audio Blob Details:
             - Size: ${audioBlob.size} bytes
             - Type: ${audioBlob.type}
-            - Chunk Count: ${validChunks.length}`);
+            - Chunk Count: ${validChunks.length}`); */
 
         if (audioBlob.size > 0) {
-            console.log(`Uploading audio at ${new Date().toISOString()}`);
-            const taskId = await this.uploadAudio(audioBlob);
-            console.log(`get returned task: ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
+            // console.log(`Uploading audio at ${new Date().toISOString()}`);
+            // const taskId = await this.uploadAudio(audioBlob);
+            // console.log(`get returned task: ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
 
-            console.log(`start polling task ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
-            // Process the recognition result
-            const result = await this.pollRecognitionResult(taskId);
+            // console.log(`start polling task ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
+            // // Process the recognition result
+            // const result = await this.pollRecognitionResult(taskId);
             
-            console.log(`Received result of task ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
+            // console.log(`Received result of task ${taskId.split('-').pop()} at ${new Date().toISOString()}`);
+            
+            const wavBlob = await convertWebmToWav(audioBlob);
+            const audioData = await wavBlob.arrayBuffer();
+
+            // Create ASR client with MP3 format
+            const asrClient = new AsrWsClient(
+              {
+                appid: 'appid',
+                token: 'token',
+                cluster: 'volcengine_streaming_common',
+                workflow: 'audio_in,resample,partition,vad,fe,decode,itn,nlu_punctuate',
+                language: 'zh-CN',
+                sample_rate: 16000,
+                format: 'wav'
+              }
+                
+            );
+
+            // Execute ASR
+            const result = await asrClient.execute(audioData);
+            
+            console.log('Streaming ASR Result:', result);
             // Trigger result callback
-            this.onResultCallback?.(result?.text || '');
+            this.onResultCallback?.(result?.transcription || '');
         } else {
             console.warn('Audio blob is empty, skipping upload');
         }
@@ -188,7 +212,7 @@ export class SpeechRecognitionManager {
         this.mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 const audioLevel = this.getAudioLevel();                
-                //console.log('Audio Level:', audioLevel);
+                ///console.log('Audio Level:', audioLevel);
                 // Ensure consistent chunk type
                 if (event.data.type === 'audio/webm;codecs=opus') {
                     this.audioChunks.push(event.data);
@@ -204,11 +228,12 @@ export class SpeechRecognitionManager {
                 }
                 // Set a new silence timer
                 if (audioLevel > this.AUDIO_THRESHOLD) {
-                    this.silenceTimer = setTimeout(async () => {
-                        console.log(`Silence detected at ${new Date().toISOString()}`);
-                        //this.stopRecognition();
-                        await this.processAudioChunks();
-                    }, this.SILENCE_THRESHOLD_MS) as unknown as number;
+                  //console.log(`Setting silence timer at ${new Date().toISOString()}`);
+                  this.silenceTimer = setTimeout(async () => {
+                      console.log(`Silence detected at ${new Date().toISOString()}`);
+                      //this.stopRecognition();
+                      await this.processAudioChunks();
+                  }, this.SILENCE_THRESHOLD_MS) as unknown as number;
                 }
                 
             } 
@@ -217,6 +242,7 @@ export class SpeechRecognitionManager {
 
       // Start recording with 500ms timeslice to capture audio chunks
       this.mediaRecorder.start(500);
+      //this.mediaRecorder.start();
       this.isRecording.value = true;
       this.onStartCallback?.();
 
@@ -249,12 +275,12 @@ export class SpeechRecognitionManager {
             this.onEndCallback?.();
             resolve();
           };
-          console.log(`Stopping mediaRecorder at ${new Date().toISOString()}`);
-          this.mediaRecorder.stop();
-        } else {
-          resolve();
-        }
-      });
+        console.log(`Stopping mediaRecorder at ${new Date().toISOString()}`);
+        this.mediaRecorder.stop();
+      } else {
+        resolve();
+      }
+    });
   }
 
   // Upload audio to remote server

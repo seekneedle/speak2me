@@ -110,6 +110,16 @@
               </svg>
             </button>
 
+            <!--  phone button -->
+            <button 
+              @click="togglePhoneCallOverlay"
+              class="ml-2 p-2 rounded-full bg-blue-100 text-blue-500 hover:bg-blue-200 focus:outline-none transition-all duration-200 ease-in-out"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+            </button>
+
             <input
               v-model="userInput"
               type="text"
@@ -131,7 +141,7 @@
 
     <!-- Speech Recognition Modal -->
     <div 
-      v-if="isListening" 
+      v-if="isListening && !isPhoneCall" 
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-lg p-6 w-80 text-center relative">
@@ -150,6 +160,49 @@
         ></canvas>
         
         <p class="text-gray-600 mb-4">{{ transcriptText }}</p>
+      </div>
+    </div>
+
+    <!-- Phone Call Overlay Modal -->
+    <div 
+      v-if="isPhoneCallOverlayVisible" 
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+    >
+      <div class="bg-white rounded-lg p-6 w-96 text-center relative">
+        <!-- <button 
+          @click="togglePhoneCallOverlay" 
+          class="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button> -->
+        
+        <div class="flex flex-col items-center">
+          <div class="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </div>
+          
+          <h2 class="text-xl font-bold mb-2">{{ phoneCallHeaderText }}</h2>
+          <p class="text-gray-600 mb-4">{{ phoneCallStatus }}</p>
+          
+          <div class="flex space-x-4 mt-4">
+            <button 
+              @click="endPhoneCall" 
+              class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition"
+            >
+              End Call
+            </button>
+            <!-- <button 
+              @click="mutePhoneCall" 
+              class="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition"
+            >
+              Mute
+            </button> -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -775,7 +828,21 @@ const resumeAudioContext = async() => {
   }
 }
 
-
+//This function provides a way to mimic user clicking 
+//the 'Send' button.
+const invokeButtonClick = async () => {
+  console.log('Current state:', {
+        useSpeechWebAPI,
+        isPhoneCall: isPhoneCall.value,
+        userInput: userInput.value,
+        isListening: isListening.value
+      });
+  // If phone call is active and there's recognized text, automatically send it
+  if (isPhoneCall.value && userInput.value.trim()) {
+    console.log('Automatically sending phone call text');
+    handleButtonClick();
+  }
+}
 
 const handleButtonClick = async () => {
   // Resume AudioContext if it's suspended
@@ -860,7 +927,7 @@ const initializeWebAPISpeechRecognition = () => {
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      console.log('Speech Recognition Full Event:', event);
+      //console.log('Speech Recognition Full Event:', event);
       
       // Clear any existing timeout
       if (speechTimeout) {
@@ -922,6 +989,12 @@ const initializeWebAPISpeechRecognition = () => {
       
       isListening.value = false;
       stopVoiceVisualization();
+
+      //Tries to invoke the 'Send' button, especially 
+      //when the phone call modal is on the top.
+      invokeButtonClick();
+
+
     };
 
     return recognition;
@@ -950,6 +1023,9 @@ const initializeCustomSpeechRecognition = () => {
         isListening.value = false;
         stopVoiceVisualization();
 
+        //Tries to invoke the 'Send' button, especially 
+        //when the phone call modal is on the top.
+        invokeButtonClick();
       })
       .onResult((text: string) => {
         console.log('Speech Recognition Result:', text);
@@ -970,8 +1046,7 @@ const initializeCustomSpeechRecognition = () => {
       })
       .onError((error: string) => {
         console.error('Speech recognition error:', error);
-        //alert('Speech recognition error: ' + error);
-
+      
         /* 
            Nicely handle error since the custom speech recogintion's backend may 
            return error from time to time. 
@@ -1033,10 +1108,11 @@ const stopSpeechRecognition = () => {
   }
   isListening.value = false;
   stopVoiceVisualization();
-
+  
 };
 
 const startVoiceVisualization = () => {
+  //if (isPhoneCall) return;
   nextTick(() => {
     // Wait for the canvas to be available
     if (!voiceWaveCanvas.value) {
@@ -1130,6 +1206,7 @@ const startVoiceVisualization = () => {
 };
 
 const stopVoiceVisualization = () => {
+  if (isPhoneCall) return;
   if (audioContext) {
     //audioContext.close();
    //audioContext = null;
@@ -1185,7 +1262,14 @@ onUnmounted(() => {
   
 });
 
-// Add this near your other watch functions
+watch(isAssistantSpeaking, (newValue) => {
+  //In phone call mode, once the assistant is not speaking,
+  //we need to open speech recognition again
+  if (newValue == false && isPhoneCallOverlayVisible.value == true) {
+    toggleSpeechRecognition();
+  }
+});
+
 watch(shouldDisplayText, (newValue) => {
   console.log(`shouldDisplayText changed at ${new Date().toISOString()}: ${newValue}`);
 });
@@ -1215,6 +1299,68 @@ watch(shouldResumeAudio, (newValue) => {
 watch(isAudioElementLoaded, (newValue) => {
   console.log(`Audio element loaded status changed at ${new Date().toISOString()}: ${newValue}`);
 });
+
+// Phone Call Overlay Modal
+const isPhoneCall = ref(false);
+const isPhoneCallOverlayVisible = ref(false);
+const phoneCallStatus = ref('Connecting to AI Assistant...');
+const phoneCallDuration = ref(0);
+let phoneCallTimer: ReturnType<typeof setTimeout> | null = null;
+const phoneCallHeaderText = ref('Phone Call');
+
+const togglePhoneCallOverlay = () => {
+  isPhoneCallOverlayVisible.value = !isPhoneCallOverlayVisible.value;
+  
+  // Reset status and start status progression when opening overlay
+  if (isPhoneCallOverlayVisible.value) {
+    isPhoneCall.value = true;
+    phoneCallStatus.value = 'Connecting to AI Assistant...';
+    phoneCallDuration.value = 0;
+    
+    // Status progression
+    setTimeout(() => {
+      phoneCallStatus.value = 'Connected';
+    }, 1000);
+    
+    // Start timer after 2 seconds
+    setTimeout(() => {
+      phoneCallStatus.value = '00:00';
+      phoneCallHeaderText.value = 'We can talk now';
+      toggleSpeechRecognition();
+      phoneCallTimer = setInterval(() => {
+        // Always toggle speech recognition if assistant is not speaking
+        if(!isAssistantSpeaking.value) {
+          console.log('Assistant: I am all ears');
+          
+        }
+        phoneCallDuration.value++;
+        const minutes = Math.floor(phoneCallDuration.value / 60);
+        const seconds = phoneCallDuration.value % 60;
+        phoneCallStatus.value = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }, 1000);
+
+    }, 2000);
+  }
+};
+
+const endPhoneCall = () => {
+  console.log('Ending phone call');
+  if (phoneCallTimer) {
+    clearInterval(phoneCallTimer);
+    phoneCallTimer = null;
+  }
+  isPhoneCallOverlayVisible.value = false;
+  phoneCallDuration.value = 0;
+  phoneCallHeaderText.value = 'Phone Call'; 
+  isPhoneCall.value = false;
+  isListening.value = false;
+  stopStreaming();
+  stopSpeechRecognition()
+};
+
+const mutePhoneCall = () => {
+  console.log('Muting phone call');
+};
 </script>
 
 <style scoped>
